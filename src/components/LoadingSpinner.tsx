@@ -1,16 +1,16 @@
 import './LoadingSpinner.css'
 
-
 interface LoadingSpinnerProps {
     isLoading: boolean;
 }
 
 export default function LoadingSpinner({ isLoading }: LoadingSpinnerProps) {
-    const displayValue = isLoading ? "block" : "none";
+    if (!isLoading) return null;
+    
     return (
-        <div id="loading-indicator" style={{display: displayValue}}>
+        <div id="loading-indicator">
             <div className="spinner"></div>
-            <div>Loading...</div>
+            <div className="loading-text">Loading...</div>
         </div>
     );
 }

@@ -84,9 +84,7 @@ function MultiSelectWidget({ obj, handleChange, refreshWidgetStates }: SelectWid
     type Option = {label: string, value: string};
     const convertInputOption = (x: InputOption) => {return {label: x.label, value: x.id}};
     const getOptions = () => data.options.map(option => convertInputOption(option));
-    const getSelectedValues = (options: Option[]) => {
-        return options.length > 0 ? options.map(x => x.value) : [""];
-    }
+    const getSelectedValues = (options: Option[]) => options.map(x => x.value);
 
     const [selected, setSelected] = useState<Option[]>([]);
     useMemo(() => {

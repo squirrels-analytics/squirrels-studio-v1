@@ -6,5 +6,6 @@ export interface TableDataType {
         }[];
         dimensions: string[];
     };
+    total_num_rows: number;
     data: Record<string, any>[];
 }

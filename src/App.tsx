@@ -13,8 +13,18 @@ import { AuthGateway, LoginModal } from './components/Authentication.js';
 import { OutputFormatEnum } from './types/DataCatalogResponse.js';
 
 declare const hostname: string;
-declare const projectMetadataURL: string;
+declare const projectsURL: string;
 
+interface ConfigureOptions {
+  limit: number;
+}
+
+interface LastRequest {
+  url: string;
+  paramSelections: Map<string, string[]>;
+  limit: number;
+  page: number;
+}
 
 async function copyTableData(tableData: TableDataType) {
     if (tableData === null || typeof tableData == "string") return;
@@ -116,6 +126,15 @@ export default function App() {
     const [paramData, setParamData] = useState<ParameterType[] | null>(null);
     const [resultContent, setResultContent] = useState<TableDataType | string | null>(null);
     const [outputFormat, setOutputFormat] = useState(OutputFormatEnum.UNSET);
+    const [showConfigurePanel, setShowConfigurePanel] = useState(false);
+    const [configureOptions, setConfigureOptions] = useState<ConfigureOptions>({
+        limit: 1000
+    });
+
+    const configPanelRef = useRef<HTMLDivElement>(null);
+    const configButtonRef = useRef<HTMLButtonElement>(null);
+
+    const [lastRequest, setLastRequest] = useState<LastRequest | null>(null);
 
     const fetchJson = async (url: string, callback: (x: any) => Promise<void>) => await callJsonAPI(url, jwtToken, username.current, callback, setIsLoading, submitLogout);
 
@@ -137,7 +156,7 @@ export default function App() {
     const submitLogout = async () => {
         clearUsername();
         clearTimeout(userTimeoutId.current);
-        await fetchJson(projectMetadataURL, async x => setProjectMetadata(x));
+        await fetchJson(projectsURL, async x => processProjects(x));
     }
 
     const createUserTimeout = () => {
@@ -169,7 +188,7 @@ export default function App() {
             updateUsername(data);
             createUserTimeout();
             
-            await fetchJson(projectMetadataURL, async x => setProjectMetadata(x));
+            await fetchJson(projectsURL, async x => processProjects(x));
         } 
         else if (response.status === 401) {
             unauthorizedCallback()
@@ -178,6 +197,9 @@ export default function App() {
             alert(`Unexpected response status: ${response.status}`);
         }
     }
+
+    type ProjectsResponseType = {projects: ProjectMetadataType[]};
+    const processProjects = (x: ProjectsResponseType) => setProjectMetadata(x.projects[0]);
 
     const toQueryParams = (paramSelections: Map<string, string[]>) => {
         const queryParams = new URLSearchParams();
@@ -190,7 +212,7 @@ export default function App() {
     }
 
     const refreshWidgetStates = (provoker: string, selections: string[]) => { 
-        const queryParams = toQueryParams(new Map([[provoker, selections]]));
+        const queryParams = toQueryParams(new Map([["x_parent_param", [provoker]], [provoker, selections]]));
         const requestURL = parametersURL.current + '?' + queryParams;
         fetchJson(requestURL, async (x: ParamDataType) => setParamData(paramData => {
             const newParamData = paramData!.slice();
@@ -206,9 +228,54 @@ export default function App() {
         setResultContent(null);
     }
 
+    const getTotalPages = (totalRows: number, limit: number) => Math.ceil(totalRows / limit);
+
+    const handlePagination = (direction: 'first' | 'prev' | 'next' | 'last') => {
+        if (!lastRequest) return;
+        
+        const totalPages = getTotalPages((resultContent as TableDataType)?.total_num_rows || 0, lastRequest.limit);
+        
+        const newPage = direction === 'first' ? 1 :
+            direction === 'prev' ? lastRequest.page - 1 :
+            direction === 'next' ? lastRequest.page + 1 :
+            totalPages;
+        
+        setLastRequest({
+            ...lastRequest,
+            page: newPage
+        });
+
+        // Reuse the last request but with new offset
+        const offset = (newPage - 1) * lastRequest.limit;
+        const queryParams = toQueryParams(lastRequest.paramSelections);
+        queryParams.append('x_offset', offset.toString());
+        queryParams.append('x_limit', lastRequest.limit.toString());
+        const requestURL = lastRequest.url + '?' + queryParams;
+
+        const callback = async (x: Response) => {
+            const data = (outputFormat === OutputFormatEnum.TABLE) ? await x.json() : 
+                (outputFormat === OutputFormatEnum.PNG) ? btoa(String.fromCharCode(...new Uint8Array(await x.arrayBuffer()))) :
+                (outputFormat === OutputFormatEnum.HTML) ? await x.text() : 
+                null;
+            setResultContent(data);
+        }
+        fetchHTTPResponse(requestURL, callback);
+    };
+
     const updateTableData = (paramSelections: Map<string, string[]>) => {
         const queryParams = toQueryParams(paramSelections);
+        queryParams.append('x_offset', '0');  // Reset offset to 0 for page 1
+        queryParams.append('x_limit', configureOptions.limit.toString());
         const requestURL = resultsURL.current + '?' + queryParams;
+
+        // Save this request for pagination
+        setLastRequest({
+            url: resultsURL.current,
+            paramSelections: paramSelections,
+            limit: configureOptions.limit,
+            page: 1
+        });
+
         const callback = async (x: Response) => {
             const data = (outputFormat === OutputFormatEnum.TABLE) ? await x.json() : 
                 (outputFormat === OutputFormatEnum.PNG) ? btoa(String.fromCharCode(...new Uint8Array(await x.arrayBuffer()))) :
@@ -220,13 +287,108 @@ export default function App() {
     };
 
     useEffect(() => {
-        fetchJson(projectMetadataURL, async x => setProjectMetadata(x));
+        fetchJson(projectsURL, async x => processProjects(x));
     }, []);
+
+    useEffect(() => {
+        function handleClickOutside(event: MouseEvent) {
+            if (configPanelRef.current && 
+                !configPanelRef.current.contains(event.target as Node) && 
+                !configButtonRef.current?.contains(event.target as Node)) {
+                setShowConfigurePanel(false);
+            }
+        }
+
+        if (showConfigurePanel) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [showConfigurePanel]);
 
     const copyTableButton = (resultContent === null || outputFormat !== OutputFormatEnum.TABLE) ? <></> : (
         <button className="white-button" onClick={() => copyTableData(resultContent as TableDataType)}>Copy Table</button>
     );
-    
+
+    const configureButton = (outputFormat === OutputFormatEnum.TABLE) ? (
+        <div className="configure-button-container">
+            <button 
+                className="white-button" 
+                ref={configButtonRef}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setShowConfigurePanel(!showConfigurePanel);
+                }}
+                style={{marginRight: '0.5rem'}}
+            >
+                Configure
+            </button>
+            {showConfigurePanel && (
+                <div className="configure-panel" ref={configPanelRef}>
+                    <div className="widget-container">
+                        <div>
+                            <div className="widget-label">Rows per page</div>
+                            <input
+                                type="number"
+                                className="widget padded"
+                                value={configureOptions.limit}
+                                min={1}
+                                onChange={(e) => setConfigureOptions({
+                                    ...configureOptions,
+                                    limit: parseInt(e.target.value) || 1
+                                })}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+        </div>
+    ) : null;
+
+    const nextLinkDisabled = ((resultContent as TableDataType)?.total_num_rows || 0) <= (lastRequest?.page || 1) * (lastRequest?.limit || 1000);
+    const paginationContainer = (outputFormat === OutputFormatEnum.TABLE && typeof resultContent !== 'string') ? (
+        <div id="pagination-container">
+            <span 
+                className={`pagination-link ${(lastRequest?.page || 1) <= 1 ? 'disabled' : ''}`}
+                onClick={() => {
+                    setLastRequest({...lastRequest!, page: 1}) 
+                    handlePagination('first')
+                }}
+            >
+                &lt;&lt; first
+            </span>
+            <span 
+                className={`pagination-link ${(lastRequest?.page || 1) <= 1 ? 'disabled' : ''}`}
+                onClick={() => (lastRequest?.page || 1) > 1 && handlePagination('prev')}
+            >
+                &lt; prev
+            </span>
+            <span className="pagination-text">
+                Page {lastRequest?.page || 1} of {getTotalPages((resultContent as TableDataType)?.total_num_rows || 0, lastRequest?.limit || 1000)}
+            </span>
+            <span 
+                className={`pagination-link ${nextLinkDisabled ? 'disabled' : ''}`}
+                onClick={() => !nextLinkDisabled && handlePagination('next')}
+            >
+                next &gt;
+            </span>
+            <span 
+                className={`pagination-link ${nextLinkDisabled ? 'disabled' : ''}`}
+                onClick={() => {
+                    if (!nextLinkDisabled) {
+                        const totalPages = getTotalPages((resultContent as TableDataType)?.total_num_rows || 0, lastRequest?.limit || 1000);
+                        setLastRequest({...lastRequest!, page: totalPages});
+                        handlePagination('last');
+                    }
+                }}
+            >
+                last &gt;&gt;
+            </span>
+        </div>
+    ) : null;
+
     return (
         <> 
             <div id="main-container" className="horizontal-container">
@@ -248,20 +410,22 @@ export default function App() {
                         updateTableData={updateTableData}
                     />
                 </div>
-                <div id="right-container">
-                    <div id="header-container">
-                        <div className="horizontal-container">
-                            {copyTableButton}
-                        </div>
-                        <AuthGateway 
-                            username={username.current}
-                            setIsLoginMode={setIsLoginMode}
-                            submitLogout={submitLogout} 
-                        />
+                <div id="header-container">
+                    <div className="horizontal-container">
+                        {configureButton}
+                        {copyTableButton}
                     </div>
-                    <div id="table-container">
+                    <AuthGateway 
+                        username={username.current}
+                        setIsLoginMode={setIsLoginMode}
+                        submitLogout={submitLogout} 
+                    />
+                </div>
+                <div id="table-container">
+                    <div className="table-content">
                         <ResultTable tableDataObj={resultContent} outputFormat={outputFormat} />
                     </div>
+                    {paginationContainer}
                 </div>
             </div>
 

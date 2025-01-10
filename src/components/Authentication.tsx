@@ -81,7 +81,7 @@ export function LoginModal({ isLoginMode, setIsLoginMode, submitLogin }: LoginMo
     const loginForm = (
         <form className="modal-content widget-container" 
             style={{width: "400px"}}
-            onClick={e => e.stopPropagation()}
+            onMouseDown={e => e.stopPropagation()}
             onSubmit={handleSubmit} 
             onReset={handleReset}
         >
@@ -117,7 +117,7 @@ export function LoginModal({ isLoginMode, setIsLoginMode, submitLogin }: LoginMo
     );
 
     return isLoginMode ? (
-        <div className="modal-background" onClick={handleReset}>
+        <div className="modal-background" onMouseDown={handleReset}>
             {loginForm}
         </div>
     ) : <></>;
