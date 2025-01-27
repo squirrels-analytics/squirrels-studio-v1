@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MultiSelect } from "react-multi-select-component";
 import DateRangePicker from '@wojtekmaj/react-daterange-picker';
 import '@wojtekmaj/react-daterange-picker/dist/DateRangePicker.css';
@@ -414,13 +414,11 @@ function WidgetFromObj({ obj, paramSelections, refreshWidgetStates }: WidgetFrom
 
 interface ParametersContainerProps {
     paramData: ParameterType[] | null;
+    paramSelections: React.MutableRefObject<Map<string, string[]>>;
     refreshWidgetStates: (provoker: string, selections: string[]) => void;
-    updateTableData: (x: Map<string, string[]>) => void;
 }
 
-export function ParametersContainer({ paramData, refreshWidgetStates, updateTableData }: ParametersContainerProps) {
-    const paramSelections = useRef(new Map<string, string[]>());
-    
+export function ParametersContainer({ paramData, paramSelections, refreshWidgetStates }: ParametersContainerProps) {
     if (paramData === null) return <></>;
 
     const widgets = paramData.map(obj => {
@@ -435,10 +433,6 @@ export function ParametersContainer({ paramData, refreshWidgetStates, updateTabl
     return (
         <div className="widget-container">
             {widgets}
-            <input type="submit" value="Apply" 
-                className="blue-button padded widget"
-                onClick={() => updateTableData(paramSelections.current)} 
-            />
         </div>
     );
 }

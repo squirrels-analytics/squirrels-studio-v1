@@ -13,7 +13,8 @@ import { AuthGateway, LoginModal } from './components/Authentication.js';
 import { OutputFormatEnum } from './types/DataCatalogResponse.js';
 
 declare const hostname: string;
-declare const projectsURL: string;
+declare const projectNameDefault: string;
+declare const projectVersionDefault: string;
 
 interface ConfigureOptions {
   limit: number;
@@ -111,6 +112,10 @@ async function callJsonAPI(
 }
 
 export default function App() {
+    const projectName = new URLSearchParams(window.location.search).get('projectName') || projectNameDefault;
+    const projectVersion = new URLSearchParams(window.location.search).get('projectVersion') || projectVersionDefault;
+    const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
+    
     const [isLoginMode, setIsLoginMode] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
@@ -156,7 +161,7 @@ export default function App() {
     const submitLogout = async () => {
         clearUsername();
         clearTimeout(userTimeoutId.current);
-        await fetchJson(projectsURL, async x => processProjects(x));
+        await fetchJson(projectMetadataURL, async x => setProjectMetadata(x));
     }
 
     const createUserTimeout = () => {
@@ -188,7 +193,7 @@ export default function App() {
             updateUsername(data);
             createUserTimeout();
             
-            await fetchJson(projectsURL, async x => processProjects(x));
+            await fetchJson(projectMetadataURL, async x => setProjectMetadata(x));
         } 
         else if (response.status === 401) {
             unauthorizedCallback()
@@ -197,9 +202,6 @@ export default function App() {
             alert(`Unexpected response status: ${response.status}`);
         }
     }
-
-    type ProjectsResponseType = {projects: ProjectMetadataType[]};
-    const processProjects = (x: ProjectsResponseType) => setProjectMetadata(x.projects[0]);
 
     const toQueryParams = (paramSelections: Map<string, string[]>) => {
         const queryParams = new URLSearchParams();
@@ -263,6 +265,8 @@ export default function App() {
     };
 
     const updateTableData = (paramSelections: Map<string, string[]>) => {
+        if (resultsURL.current === "") return;
+
         const queryParams = toQueryParams(paramSelections);
         queryParams.append('x_offset', '0');  // Reset offset to 0 for page 1
         queryParams.append('x_limit', configureOptions.limit.toString());
@@ -287,7 +291,7 @@ export default function App() {
     };
 
     useEffect(() => {
-        fetchJson(projectsURL, async x => processProjects(x));
+        fetchJson(projectMetadataURL, async x => setProjectMetadata(x));
     }, []);
 
     useEffect(() => {
@@ -308,8 +312,14 @@ export default function App() {
         };
     }, [showConfigurePanel]);
 
-    const copyTableButton = (resultContent === null || outputFormat !== OutputFormatEnum.TABLE) ? <></> : (
-        <button className="white-button" onClick={() => copyTableData(resultContent as TableDataType)}>Copy Table</button>
+    const copyTableButton = (
+        <button 
+            className="white-button" 
+            onClick={() => copyTableData(resultContent as TableDataType)}
+            disabled={resultContent === null || outputFormat !== OutputFormatEnum.TABLE}
+        >
+            Copy Table
+        </button>
     );
 
     const configureButton = (outputFormat === OutputFormatEnum.TABLE) ? (
@@ -321,7 +331,6 @@ export default function App() {
                     e.stopPropagation();
                     setShowConfigurePanel(!showConfigurePanel);
                 }}
-                style={{marginRight: '0.5rem'}}
             >
                 Configure
             </button>
@@ -389,37 +398,51 @@ export default function App() {
         </div>
     ) : null;
 
+    const paramSelections = useRef(new Map<string, string[]>());
+    
     return (
         <> 
-            <div id="main-container" className="horizontal-container">
+            <div id="main-container">
                 <div id="left-container">
-                    <Settings 
-                        projectMetadata={projectMetadata} 
-                        tokenURL={tokenURL}
-                        parametersURL={parametersURL}
-                        resultsURL={resultsURL}
-                        fetchJson={fetchJson}
-                        setParamData={setParamData}
-                        clearTableData={clearTableData}
-                        setOutputFormat={setOutputFormat}
-                    />
-                    <br/><hr/><br/>
-                    <ParametersContainer 
-                        paramData={paramData} 
-                        refreshWidgetStates={refreshWidgetStates}
-                        updateTableData={updateTableData}
-                    />
+                    <div className="left-container-content">
+                        <Settings 
+                            projectMetadata={projectMetadata} 
+                            tokenURL={tokenURL}
+                            parametersURL={parametersURL}
+                            resultsURL={resultsURL}
+                            fetchJson={fetchJson}
+                            setParamData={setParamData}
+                            clearTableData={clearTableData}
+                            setOutputFormat={setOutputFormat}
+                        />
+                        <br/><hr/><br/>
+                        <ParametersContainer 
+                            paramData={paramData} 
+                            paramSelections={paramSelections}
+                            refreshWidgetStates={refreshWidgetStates}
+                        />
+                    </div>
+                    <div className="left-container-footer">
+                        <button 
+                            className="blue-button"
+                            style={{width: '100%'}}
+                            onClick={() => updateTableData(paramSelections.current)}
+                        >
+                            Apply
+                        </button>
+                    </div>
                 </div>
                 <div id="header-container">
+                    <span style={{margin: "0 0.5rem"}}><b>Project Name:</b> {projectMetadata?.label}</span>
                     <div className="horizontal-container">
+                        <AuthGateway 
+                            username={username.current}
+                            setIsLoginMode={setIsLoginMode}
+                            submitLogout={submitLogout} 
+                        />
                         {configureButton}
                         {copyTableButton}
                     </div>
-                    <AuthGateway 
-                        username={username.current}
-                        setIsLoginMode={setIsLoginMode}
-                        submitLogout={submitLogout} 
-                    />
                 </div>
                 <div id="table-container">
                     <div className="table-content">
