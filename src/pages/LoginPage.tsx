@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../Router';
 import LoadingSpinner from '../components/LoadingSpinner';
 import './LoginPage.css';
+import { getHashParams } from '../utils/urlParams';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -14,14 +15,16 @@ export default function LoginPage() {
     password: ''
   });
 
-  const searchParams = new URLSearchParams(window.location.search);
+  const searchParams = getHashParams();
   const hostname = searchParams.get('host');
   const projectName = searchParams.get('projectName');
   const projectVersion = searchParams.get('projectVersion');
-  if (!hostname || !projectName || !projectVersion) {
+
+  useEffect(() => {
+    if (!hostname || !projectName || !projectVersion) {
       navigate('/');
-      return;
-  }
+    }
+  }, [hostname, projectName, projectVersion, navigate]);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;

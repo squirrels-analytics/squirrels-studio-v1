@@ -13,6 +13,7 @@ import Settings from '../components/Settings.js'
 import ResultTable from '../components/ResultTable.js';
 import { ParametersContainer } from '../components/ParameterWidgets.js';
 import './ExplorerPage.css';
+import { getHashParams } from '../utils/urlParams';
 
 interface ConfigureOptions {
   limit: number;
@@ -101,7 +102,7 @@ export default function ExplorerPage() {
     const navigate = useNavigate();
     const { isAuthenticated, username, jwtToken, logout, isAdmin } = useAuth();
     
-    const searchParams = new URLSearchParams(window.location.search);
+    const searchParams = getHashParams();
     const hostname = searchParams.get('host');
     const projectName = searchParams.get('projectName');
     const projectVersion = searchParams.get('projectVersion');

@@ -1,4 +1,4 @@
-import { createBrowserRouter, RouterProvider, Outlet, useNavigate } from 'react-router-dom';
+import { createHashRouter, RouterProvider, Outlet, useNavigate } from 'react-router-dom';
 import { createContext, useContext, useEffect, useState } from 'react';
 import LoginPage from './pages/LoginPage';
 import ExplorerPage from './pages/ExplorerPage';
@@ -111,15 +111,24 @@ export const useAuth = () => {
 // Create a layout component that includes the SessionTimeoutHandler
 function AppLayout() {
   const navigate = useNavigate();
+  const location = window.location;
   
-  // Get URL parameters that are common across the app
-  const searchParams = new URLSearchParams(window.location.search);
-  const hostname = searchParams.get('host');
-  const projectName = searchParams.get('projectName');
-  const projectVersion = searchParams.get('projectVersion');
-  if (!hostname || !projectName || !projectVersion) {
+  // Parse parameters from hash fragment instead of search params
+  const hashParams = new URLSearchParams(location.hash.split('?')[1] || '');
+  const hostname = hashParams.get('host');
+  const projectName = hashParams.get('projectName');
+  const projectVersion = hashParams.get('projectVersion');
+  
+  // Use useEffect for navigation to avoid render issues
+  useEffect(() => {
+    if (!hostname || !projectName || !projectVersion) {
       navigate('/');
-      return;
+    }
+  }, [hostname, projectName, projectVersion, navigate]);
+
+  // Only render the content if we have all required parameters
+  if (!hostname || !projectName || !projectVersion) {
+    return null;
   }
 
   return (
@@ -135,7 +144,7 @@ function AppLayout() {
 }
 
 // Create the router with the layout
-const router = createBrowserRouter([
+const router = createHashRouter([
   {
     path: '/',
     element: <RootPage />

@@ -4,6 +4,7 @@ import { useAuth } from '../Router';
 import { FaKey, FaLock, FaTrash, FaPlus, FaInfinity, FaCopy, FaExclamationTriangle } from 'react-icons/fa';
 import LoadingSpinner from '../components/LoadingSpinner';
 import './UserSettingsPage.css';
+import { getHashParams } from '../utils/urlParams';
 
 interface Token {
   token_id: string;
@@ -31,22 +32,24 @@ export default function UserSettingsPage() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  const searchParams = new URLSearchParams(window.location.search);
+  const searchParams = getHashParams();
   const hostname = searchParams.get('host');
   const projectName = searchParams.get('projectName');
   const projectVersion = searchParams.get('projectVersion');
-  if (!hostname || !projectName || !projectVersion) {
-      navigate('/');
-      return;
-  }
   const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
 
-  // Redirect if not authenticated
+  // Add useEffect for navigation
   useEffect(() => {
+    if (!hostname || !projectName || !projectVersion) {
+      navigate('/');
+      return;
+    }
+    
+    // Redirect if not authenticated
     if (!isAuthenticated) {
       navigate(`/login?host=${hostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
     }
-  }, [isAuthenticated, navigate]);
+  }, [hostname, projectName, projectVersion, isAuthenticated, navigate]);
 
   // Fetch user tokens on component mount
   useEffect(() => {

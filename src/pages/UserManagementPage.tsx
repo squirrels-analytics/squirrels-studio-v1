@@ -5,6 +5,7 @@ import { FaUserPlus, FaTrash, FaArrowLeft, FaEdit } from 'react-icons/fa';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { User, UserField } from '../types/UserManagement';
 import './UserManagementPage.css';
+import { getHashParams } from '../utils/urlParams';
 
 export default function UserManagementPage() {
   const navigate = useNavigate();
@@ -23,23 +24,23 @@ export default function UserManagementPage() {
   });
   const [editUserData, setEditUserData] = useState<Record<string, any>>({});
 
-  const searchParams = new URLSearchParams(window.location.search);
+  const searchParams = getHashParams();
   const hostname = searchParams.get('host');
   const projectName = searchParams.get('projectName');
   const projectVersion = searchParams.get('projectVersion');
-  if (!hostname || !projectName || !projectVersion) {
-      navigate('/');
-      return;
-  }
   const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
 
-  // Fetch users and user fields on component mount
   useEffect(() => {
+    if (!hostname || !projectName || !projectVersion) {
+      navigate('/');
+      return;
+    }
+    
     if (isAuthenticated) {
       fetchUsers();
       fetchUserFields();
     }
-  }, [isAuthenticated]);
+  }, [hostname, projectName, projectVersion, isAuthenticated, navigate]);
 
   const fetchUsers = async () => {
     setIsLoading(true);
