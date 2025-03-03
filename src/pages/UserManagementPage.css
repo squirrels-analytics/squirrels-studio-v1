@@ -1,0 +1,123 @@
+.users-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.users-table th,
+.users-table td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.users-table th {
+  font-weight: 600;
+  color: var(--text-secondary);
+  background-color: var(--background);
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.user-modal {
+  max-width: 400px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  margin: auto;
+  position: relative;
+  animation: modalFadeIn 0.3s;           /* Smooth entrance animation */
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  background-color: var(--surface);
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.null-toggle {
+  margin-bottom: 0.5rem;
+}
+
+.form-group input:disabled,
+.form-group select:disabled {
+  opacity: 0.6;
+  background-color: var(--background);
+}
+
+.null-value {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.scrollable-form {
+  overflow-y: auto;
+  max-height: calc(50vh - 80px);
+  padding-right: 10px;
+}
+
+/* For Firefox */
+.scrollable-form {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* For Chrome, Edge, and Safari */
+.scrollable-form::-webkit-scrollbar {
+  width: 8px;
+}
+
+.scrollable-form::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollable-form::-webkit-scrollbar-thumb {
+  background-color: var(--border);
+  border-radius: 4px;
+}
+
+.disabled-button {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.password-input-container {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.password-input-container input {
+  flex: 1;
+}
+
+.generate-password-button {
+  padding: 0.5rem;
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.generate-password-button:hover {
+  background-color: var(--hover);
+} 

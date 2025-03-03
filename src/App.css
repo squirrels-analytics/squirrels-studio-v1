@@ -194,18 +194,6 @@ button {
   height: 100%;
   overflow: auto;
   background-color: rgba(0,0,0,0.4);
-  padding-top: 60px;
-}
-
-.modal-content {
-  border-radius: var(--radius-md);
-  background-color: var(--surface);
-  padding: 2rem;
-  width: 100%;
-  max-width: 400px;                      /* Control maximum width */
-  margin: 0 auto;                        /* Center horizontally */
-  box-shadow: var(--shadow-md);          /* Add shadow for depth */
-  animation: modalFadeIn 0.3s;           /* Smooth entrance animation */
 }
 
 /* Add animation keyframes */
@@ -228,33 +216,6 @@ button {
   box-shadow: var(--shadow-md);
   font-size: 0.875rem;
   color: var(--text-secondary);
-}
-
-.configure-panel {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  margin-top: 0.5rem;
-  background-color: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 1rem;
-  box-shadow: var(--shadow-md);
-  z-index: 3;
-}
-
-.configure-panel .widget-container {
-  gap: 1rem;
-}
-
-.configure-panel input[type="number"] {
-  width: 120px;
-}
-
-.configure-button-container {
-  position: relative;
-  display: flex;
-  align-items: center;
 }
 
 /* Add styles for the pagination container */
@@ -288,4 +249,22 @@ button {
 .pagination-text {
     color: var(--text);
     user-select: none;
+}
+
+.auth-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* Add these styles for the menu */
+.menu-button-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.header-buttons {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }

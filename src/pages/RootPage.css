@@ -1,0 +1,42 @@
+.root-page {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--background);
+}
+
+.root-container {
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 2rem;
+  width: 100%;
+  max-width: 400px;
+}
+
+.root-container h1 {
+  color: var(--primary);
+  margin-top: 0;
+  text-align: center;
+}
+
+.root-container h2 {
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+.connect-button {
+  width: 100%;
+  padding: 0.75rem;
+  margin-top: 1rem;
+}
+
+.error-message {
+  background-color: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 1.5rem;
+  text-align: center;
+} 

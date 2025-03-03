@@ -7,7 +7,6 @@ import { DataObjectType, DashboardType, DataCatalogType, OutputFormatEnum } from
 
 interface SettingsProps {
     projectMetadata: ProjectMetadataType | null;
-    tokenURL: MutableRefObject<string>;
     parametersURL: MutableRefObject<string>;
     resultsURL: MutableRefObject<string>;
     fetchJson: (url: string, callback: (x: any) => Promise<void>) => Promise<void>;
@@ -17,7 +16,7 @@ interface SettingsProps {
 }
 
 export default function Settings({ 
-    projectMetadata, tokenURL, parametersURL, resultsURL, fetchJson, setParamData, clearTableData, setOutputFormat
+    projectMetadata, parametersURL, resultsURL, fetchJson, setParamData, clearTableData, setOutputFormat
 }: SettingsProps) {
 
     const [isDashboardMode, toggleDashboardMode] = useState<boolean>(false);
@@ -29,7 +28,6 @@ export default function Settings({
     useLayoutEffect(() => {
         if (projectMetadata === null) return;
 
-        tokenURL.current = projectMetadata.versions[0].token_path;
         const dataCatalogURL = projectMetadata.versions[0].data_catalog_path;
         fetchJson(dataCatalogURL, async (x: DataCatalogType) => {
             log("setting list of datasets / dashboards available");

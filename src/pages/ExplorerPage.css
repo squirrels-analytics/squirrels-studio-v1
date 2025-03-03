@@ -1,0 +1,77 @@
+/* Styles specific to the Explorer page */
+
+.config-input {
+  max-width: 80px;
+  padding: 6px 10px;
+}
+
+/* Update the menu styles */
+.menu-panel {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 0.5rem;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-md);
+  z-index: 3;
+  min-width: 250px;
+  padding: 0.5rem 0;
+}
+
+.menu-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.menu-section {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.menu-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.menu-section-header {
+  padding: 0.5rem 0.6rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.menu-item {
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.menu-item:hover {
+  background-color: var(--background);
+  color: var(--primary);
+}
+  
+.menu-config-item {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+}
+
+.menu-config-item label {
+  font-size: 0.875rem;
+  color: var(--text);
+  white-space: nowrap;
+  margin: 0;
+}
+
+.menu-config-item input {
+  width: 100%;
+  margin: 0;
+}
