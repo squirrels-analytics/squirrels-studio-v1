@@ -26,6 +26,12 @@ export default function LoginPage() {
     }
   }, [hostname, projectName, projectVersion, navigate]);
 
+  if (!hostname || !projectName || !projectVersion) {
+    return null;
+  }
+  const encodedHostname = encodeURIComponent(hostname);
+  const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
+
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setFormData((prevFormData) => ({
@@ -35,7 +41,7 @@ export default function LoginPage() {
   };
 
   const handleGuestAccess = () => {
-    navigate(`/explorer?host=${hostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+    navigate(`/explorer?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -49,7 +55,7 @@ export default function LoginPage() {
       loginData.append('username', formData.username);
       loginData.append('password', formData.password);
       
-      const loginURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}/login`;
+      const loginURL = `${projectMetadataURL}/login`;
       const response = await fetch(hostname + loginURL, {
         method: 'POST',
         body: loginData
@@ -58,7 +64,7 @@ export default function LoginPage() {
       if (response.status === 200) {
         const data = await response.json();
         login(data.username, data.access_token, data.expiry_time, data.is_admin);
-        navigate(`/explorer?host=${hostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+        navigate(`/explorer?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
       } else if (response.status === 401) {
         setError('Invalid username or password');
       } else {
@@ -79,12 +85,12 @@ export default function LoginPage() {
         <h2>Project: {projectName} / {projectVersion}</h2>
         <div style={{ textAlign: 'center' }}>
           <div className="api-docs-buttons">
-            <a href={`${hostname}/api/squirrels-v0/project/${projectName}/${projectVersion}/redoc`} target="_blank" rel="noopener noreferrer">
+            <a href={`${hostname}${projectMetadataURL}/redoc`} target="_blank" rel="noopener noreferrer">
               <button className="blue-button">
                 <span>ReDoc API Docs</span>
               </button>
             </a>
-            <a href={`${hostname}/api/squirrels-v0/project/${projectName}/${projectVersion}/docs`} target="_blank" rel="noopener noreferrer">
+            <a href={`${hostname}${projectMetadataURL}/docs`} target="_blank" rel="noopener noreferrer">
               <button className="white-button">
                 <span>Swagger API Docs</span>
               </button>

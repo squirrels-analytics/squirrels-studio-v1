@@ -28,12 +28,10 @@ export default function UserManagementPage() {
   const hostname = searchParams.get('host');
   const projectName = searchParams.get('projectName');
   const projectVersion = searchParams.get('projectVersion');
-  const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
 
   useEffect(() => {
     if (!hostname || !projectName || !projectVersion) {
       navigate('/');
-      return;
     }
     
     if (isAuthenticated) {
@@ -41,6 +39,12 @@ export default function UserManagementPage() {
       fetchUserFields();
     }
   }, [hostname, projectName, projectVersion, isAuthenticated, navigate]);
+
+  if (!hostname || !projectName || !projectVersion) {
+    return null;
+  }
+  const encodedHostname = encodeURIComponent(hostname);
+  const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
 
   const fetchUsers = async () => {
     setIsLoading(true);
@@ -57,7 +61,7 @@ export default function UserManagementPage() {
       } else if (response.status === 401) {
         alert('Your session has expired. Please log in again.');
         logout();
-        navigate(`/login?host=${hostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+        navigate(`/login?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
       } else {
         setError('Failed to fetch users');
       }
@@ -259,7 +263,7 @@ export default function UserManagementPage() {
         <div className="header-actions">
           <button 
             className="white-button" 
-            onClick={() => navigate(`/explorer?host=${hostname}&projectName=${projectName}&projectVersion=${projectVersion}`)}
+            onClick={() => navigate(`/explorer?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`)}
           >
             <FaArrowLeft /> Back to Explorer
           </button>

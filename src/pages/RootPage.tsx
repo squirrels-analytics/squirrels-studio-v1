@@ -40,7 +40,7 @@ export default function RootPage() {
       await response.json();
       
       // If connection is successful, navigate to login
-      navigate(`/login?host=${encodeURIComponent(formData.hostname)}&projectName=${encodeURIComponent(formData.projectName)}&projectVersion=${encodeURIComponent(formData.projectVersion)}`);
+      navigate(`/login?host=${encodeURIComponent(formData.hostname)}&projectName=${formData.projectName}&projectVersion=${formData.projectVersion}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connection failed: Unknown error');
     } finally {

@@ -36,20 +36,19 @@ export default function UserSettingsPage() {
   const hostname = searchParams.get('host');
   const projectName = searchParams.get('projectName');
   const projectVersion = searchParams.get('projectVersion');
-  const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
 
   // Add useEffect for navigation
   useEffect(() => {
     if (!hostname || !projectName || !projectVersion) {
       navigate('/');
-      return;
-    }
-    
-    // Redirect if not authenticated
-    if (!isAuthenticated) {
-      navigate(`/login?host=${hostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
     }
   }, [hostname, projectName, projectVersion, isAuthenticated, navigate]);
+
+  if (!hostname || !projectName || !projectVersion) {
+    return null;
+  }
+  const encodedHostname = encodeURIComponent(hostname);
+  const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
 
   // Fetch user tokens on component mount
   useEffect(() => {
@@ -73,7 +72,7 @@ export default function UserSettingsPage() {
       } else if (response.status === 401) {
         alert('Your session has expired. Please log in again.');
         logout();
-        navigate(`/login?host=${hostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+        navigate(`/login?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
       } else {
         setError('Failed to fetch tokens');
       }
@@ -249,7 +248,7 @@ export default function UserSettingsPage() {
       <div className="settings-header">
         <h1>User Settings</h1>
         <div className="header-actions">
-          <button className="white-button" onClick={() => navigate(`/explorer?host=${hostname}&projectName=${projectName}&projectVersion=${projectVersion}`)}>
+          <button className="white-button" onClick={() => navigate(`/explorer?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`)}>
             Back to Explorer
           </button>
         </div>

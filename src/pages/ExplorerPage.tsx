@@ -106,10 +106,17 @@ export default function ExplorerPage() {
     const hostname = searchParams.get('host');
     const projectName = searchParams.get('projectName');
     const projectVersion = searchParams.get('projectVersion');
-    if (!hostname || !projectName || !projectVersion) {
+
+    useEffect(() => {
+      if (!hostname || !projectName || !projectVersion) {
         navigate('/');
-        return;
+      }
+    }, [hostname, projectName, projectVersion, navigate]);
+  
+    if (!hostname || !projectName || !projectVersion) {
+      return null;
     }
+    const encodedHostname = encodeURIComponent(hostname);
     const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
     
     const [isLoading, setIsLoading] = useState(false);
@@ -181,7 +188,7 @@ export default function ExplorerPage() {
 
     const handleLogout = () => {
         logout();
-        navigate(`/login?host=${hostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+        navigate(`/login?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
     };
 
     const toQueryParams = (paramSelections: Map<string, string[]>) => {
@@ -339,7 +346,7 @@ export default function ExplorerPage() {
                                 <div 
                                     className="menu-item"
                                     onClick={() => {
-                                        navigate(`/settings?host=${hostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+                                        navigate(`/settings?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
                                         setShowMenu(false);
                                     }}
                                 >
@@ -350,7 +357,7 @@ export default function ExplorerPage() {
                                 <div 
                                     className="menu-item"
                                     onClick={() => {
-                                        navigate(`/users?host=${hostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+                                        navigate(`/users?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
                                         setShowMenu(false);
                                     }}
                                 >

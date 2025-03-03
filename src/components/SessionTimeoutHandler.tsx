@@ -20,7 +20,7 @@ export default function SessionTimeoutHandler({
   const handleLogout = () => {
     clearTimeout(userTimeoutId.current);
     logout();
-    navigate(`/login?host=${hostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+    navigate(`/login?host=${encodeURIComponent(hostname)}&projectName=${projectName}&projectVersion=${projectVersion}`);
     alert("User session expired");
   };
 
