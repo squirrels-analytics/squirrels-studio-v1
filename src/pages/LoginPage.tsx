@@ -7,7 +7,7 @@ import { getHashParams } from '../utils/urlParams';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { login, logout } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -24,7 +24,7 @@ export default function LoginPage() {
     if (!hostname || !projectName || !projectVersion) {
       navigate('/');
     }
-  }, [hostname, projectName, projectVersion, navigate]);
+  }, [hostname, projectName, projectVersion, navigate, logout]);
 
   if (!hostname || !projectName || !projectVersion) {
     return null;
@@ -82,7 +82,16 @@ export default function LoginPage() {
     <div className="login-page">
       <div className="login-container">
         <h1>Squirrels Studio Login</h1>
-        <h2>Project: {projectName} / {projectVersion}</h2>
+        <div className="project-header">
+          <h2>Project: {projectName} / {projectVersion}</h2>
+          <button 
+            onClick={() => navigate('/')} 
+            className="edit-project-button"
+            title="Change project configuration"
+          >
+            ✏️
+          </button>
+        </div>
         <div style={{ textAlign: 'center' }}>
           <div className="api-docs-buttons">
             <a href={`${hostname}${projectMetadataURL}/redoc`} target="_blank" rel="noopener noreferrer">

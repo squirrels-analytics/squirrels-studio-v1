@@ -1,9 +1,11 @@
 .login-page {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
   background-color: var(--background);
+  position: relative;
 }
 
 .login-container {
@@ -87,4 +89,34 @@
 .api-docs-buttons button {
   width: 100%;
   white-space: nowrap;
+}
+
+.project-header {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.project-header h2 {
+  margin: 0;
+}
+
+.edit-project-button {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 5px;
+  margin-left: 8px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.edit-project-button:hover {
+  background-color: var(--hover);
 } 

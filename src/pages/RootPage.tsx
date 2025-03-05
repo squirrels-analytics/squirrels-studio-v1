@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './RootPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -12,6 +12,14 @@ export default function RootPage() {
   });
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+
+  // Clear any existing authentication data when the root page loads
+  useEffect(() => {
+    sessionStorage.removeItem('username');
+    sessionStorage.removeItem('jwtToken');
+    sessionStorage.removeItem('expiryTime');
+    sessionStorage.removeItem('isAdmin');
+  }, []);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
