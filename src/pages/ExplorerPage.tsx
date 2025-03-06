@@ -100,7 +100,7 @@ async function callJsonAPI(
 
 export default function ExplorerPage() {
     const navigate = useNavigate();
-    const { isAuthenticated, username, jwtToken, logout, isAdmin } = useAuth();
+    const { isAuthenticated, jwtToken, username, login, logout, isAdmin } = useAuth();
     
     const searchParams = getHashParams();
     const hostname = searchParams.get('host');
@@ -443,6 +443,30 @@ export default function ExplorerPage() {
 
     const paramSelections = useRef(new Map<string, string[]>());
     
+    // Listen for cross-tab authentication messages
+    useEffect(() => {
+        const handleMessage = (event: MessageEvent) => {
+            if (event.data.type === 'SQUIRRELS_TOKEN_DATA') {
+                const { jwtToken, username, expiryTime, isAdmin } = event.data.data;
+                
+                // Update login state through the auth context
+                login(username, jwtToken, expiryTime, isAdmin);
+
+                // Refresh the page to ensure all components reflect the new auth state
+                const encodedHostname = encodeURIComponent(hostname);
+                window.location.href = `${window.location.pathname}#/explorer?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`;
+                window.location.reload();
+            }
+        };
+
+        window.addEventListener('message', handleMessage);
+        
+        // Clean up the event listener when component unmounts
+        return () => {
+            window.removeEventListener('message', handleMessage);
+        };
+    }, [login]);
+
     return (
         <> 
             <div id="main-container">
