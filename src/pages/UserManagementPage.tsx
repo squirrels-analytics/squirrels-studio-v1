@@ -92,7 +92,7 @@ export default function UserManagementPage() {
           password: '',
           is_admin: false
         };
-        data.forEach(field => {
+        customFields.forEach(field => {
           defaultData[field.name] = field.default;
         });
         setNewUserData(defaultData);
@@ -122,12 +122,17 @@ export default function UserManagementPage() {
         setSuccessMessage('User created successfully');
         setShowCreateModal(false);
         fetchUsers();
-        // Reset form
-        setNewUserData({
+        
+        // Reset form with proper defaults from userFields
+        const defaultData: Record<string, any> = {
           username: '',
           password: '',
           is_admin: false
+        };
+        userFields.forEach(field => {
+          defaultData[field.name] = field.default;
         });
+        setNewUserData(defaultData);
       } else {
         const data = await response.json();
         setError(data.message || 'Failed to create user');

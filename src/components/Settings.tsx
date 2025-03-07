@@ -39,8 +39,7 @@ export default function Settings({
         if (dataObjList === null) return;
 
         if (dataObjList.length === 0) {
-            log("alert if no datasets or dashboards found...");
-            alert(`No ${dataObjType} found for current user`);
+            log("no datasets or dashboards found...");
             setDataObj(null);
         }
         else {
