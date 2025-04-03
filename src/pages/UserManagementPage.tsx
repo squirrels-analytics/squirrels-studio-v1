@@ -5,7 +5,7 @@ import { FaUserPlus, FaTrash, FaArrowLeft, FaEdit } from 'react-icons/fa';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { User, UserField } from '../types/UserManagement';
 import './UserManagementPage.css';
-import { getHashParams } from '../utils/urlParams';
+import { getHashParams, getProjectRelatedQueryParams, getProjectMetadataPath } from '../utils';
 
 export default function UserManagementPage() {
   const navigate = useNavigate();
@@ -29,8 +29,11 @@ export default function UserManagementPage() {
   const projectName = searchParams.get('projectName');
   const projectVersion = searchParams.get('projectVersion');
 
+  const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
+  const projectRelatedQueryParams = getProjectRelatedQueryParams(hostname, projectName, projectVersion);
+
   useEffect(() => {
-    if (!hostname || !projectName || !projectVersion) {
+    if (!hostname || !projectMetadataPath) {
       navigate('/');
     }
     
@@ -38,18 +41,12 @@ export default function UserManagementPage() {
       fetchUsers();
       fetchUserFields();
     }
-  }, [hostname, projectName, projectVersion, isAuthenticated, navigate]);
-
-  if (!hostname || !projectName || !projectVersion) {
-    return null;
-  }
-  const encodedHostname = encodeURIComponent(hostname);
-  const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
+  }, [hostname, projectMetadataPath, isAuthenticated, navigate]);
 
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${hostname}${projectMetadataURL}/users`, {
+      const response = await fetch(`${hostname}${projectMetadataPath}/users`, {
         headers: {
           'Authorization': `Bearer ${jwtToken}`
         }
@@ -61,7 +58,7 @@ export default function UserManagementPage() {
       } else if (response.status === 401) {
         alert('Your session has expired. Please log in again.');
         logout();
-        navigate(`/login?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+        navigate(`/login?${projectRelatedQueryParams}`);
       } else {
         setError('Failed to fetch users');
       }
@@ -75,7 +72,7 @@ export default function UserManagementPage() {
 
   const fetchUserFields = async () => {
     try {
-      const response = await fetch(`${hostname}${projectMetadataURL}/user-fields`, {
+      const response = await fetch(`${hostname}${projectMetadataPath}/user-fields`, {
         headers: {
           'Authorization': `Bearer ${jwtToken}`
         }
@@ -109,7 +106,7 @@ export default function UserManagementPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${projectMetadataURL}/users`, {
+      const response = await fetch(`${hostname}${projectMetadataPath}/users`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
@@ -156,7 +153,7 @@ export default function UserManagementPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${projectMetadataURL}/users/${username}`, {
+      const response = await fetch(`${hostname}${projectMetadataPath}/users/${username}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${jwtToken}`
@@ -225,7 +222,7 @@ export default function UserManagementPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${projectMetadataURL}/users/${editUserData.username}`, {
+      const response = await fetch(`${hostname}${projectMetadataPath}/users/${editUserData.username}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
@@ -268,7 +265,7 @@ export default function UserManagementPage() {
         <div className="header-actions">
           <button 
             className="white-button" 
-            onClick={() => navigate(`/explorer?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`)}
+            onClick={() => navigate(`/explorer?${projectRelatedQueryParams}`)}
           >
             <FaArrowLeft /> Back to Explorer
           </button>

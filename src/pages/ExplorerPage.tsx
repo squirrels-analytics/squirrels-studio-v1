@@ -1,19 +1,26 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../Router';
 import { FaCopy, FaBars } from 'react-icons/fa';
+import CodeMirror from '@uiw/react-codemirror';
+import { sql } from '@codemirror/lang-sql';
+import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
+import { keymap } from '@codemirror/view';
+import { Prec } from '@codemirror/state';
 
-import { ProjectMetadataType } from '../types/ProjectMetadataResponse.js';
 import { ParamDataType, ParameterType } from '../types/ParametersResponse.js';
 import { TableDataType } from '../types/DatasetResponse.js';
-import { OutputFormatEnum } from '../types/DataCatalogResponse.js';
+import { OutputFormatEnum, ModelType, LineageType, DataTypeType, ConnectionType } from '../types/DataCatalogResponse.js';
 
 import LoadingSpinner from '../components/LoadingSpinner.js';
 import Settings from '../components/Settings.js'
 import ResultTable from '../components/ResultTable.js';
 import { ParametersContainer } from '../components/ParameterWidgets.js';
 import './ExplorerPage.css';
-import { getHashParams } from '../utils/urlParams';
+import { getHashParams, getProjectMetadataPath, getProjectRelatedQueryParams, validateSquirrelsVersion } from '../utils';
+import ModelExplorer from '../components/ModelExplorer';
+import LineageGraph from '../components/LineageGraph';
+import { ProjectMetadataType } from '../types/ProjectMetadataResponse.js';
 
 interface ConfigureOptions {
   limit: number;
@@ -24,6 +31,7 @@ interface LastRequest {
   paramSelections: Map<string, string[]>;
   limit: number;
   page: number;
+  sqlQuery?: string;
 }
 
 async function copyTableData(tableData: TableDataType): Promise<string | null> {
@@ -39,9 +47,9 @@ async function copyTableData(tableData: TableDataType): Promise<string | null> {
 
     for (let i = 0; i < tableData.data.length; i++) {
         const tableRow = tableData.data[i];
-        for (let j = 0; j < fields.length; j++) {
+        for (let j = 0; j < tableRow.length; j++) {
             if (j !== 0) text += "\t";
-            text += tableRow[fields[j].name];
+            text += tableRow[j];
         }
         text += "\n";
     }
@@ -50,13 +58,13 @@ async function copyTableData(tableData: TableDataType): Promise<string | null> {
 }
 
 async function callAPI(
-    hostname: string, url: string, jwtToken: string, username: string, callback: (x: Response) => Promise<void>, 
+    url: string, jwtToken: string, username: string, callback: (x: Response) => Promise<void>, 
     setIsLoading: (x: boolean) => void, logout: () => void
 ) {
     setIsLoading(true);
     
     try {
-        const response = await fetch(hostname+url, {
+        const response = await fetch(url, {
             headers: {
                 'Authorization': `Bearer ${jwtToken}`
             }
@@ -88,14 +96,14 @@ async function callAPI(
 }
 
 async function callJsonAPI(
-    hostname: string, url: string, jwtToken: string, username: string, callback: (x: any) => Promise<void>, 
+    url: string, jwtToken: string, username: string, callback: (x: any) => Promise<void>, 
     setIsLoading: (x: boolean) => void, logout: () => void
 ) {
     const newCallback = async (x: Response) => {
         const data = await x.json();
         await callback(data);
     };
-    await callAPI(hostname, url, jwtToken, username, newCallback, setIsLoading, logout);
+    await callAPI(url, jwtToken, username, newCallback, setIsLoading, logout);
 }
 
 export default function ExplorerPage() {
@@ -107,17 +115,14 @@ export default function ExplorerPage() {
     const projectName = searchParams.get('projectName');
     const projectVersion = searchParams.get('projectVersion');
 
+    const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
+    const projectRelatedQueryParams = getProjectRelatedQueryParams(hostname, projectName, projectVersion);
+    
     useEffect(() => {
-      if (!hostname || !projectName || !projectVersion) {
-        navigate('/');
-      }
-    }, [hostname, projectName, projectVersion, navigate]);
-  
-    if (!hostname || !projectName || !projectVersion) {
-      return null;
-    }
-    const encodedHostname = encodeURIComponent(hostname);
-    const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
+        if (!hostname || !projectMetadataPath) {
+          navigate('/');
+        }
+      }, [hostname, projectMetadataPath, navigate]);
     
     const [isLoading, setIsLoading] = useState(false);
 
@@ -136,12 +141,32 @@ export default function ExplorerPage() {
     });
 
     const [lastRequest, setLastRequest] = useState<LastRequest | null>(null);
+    const [models, setModels] = useState<ModelType[]>([]);
+    const [connections, setConnections] = useState<ConnectionType[]>([]);
+    const [lineageData, setLineageData] = useState<LineageType[]>([]);
+    const [dataMode, toggleDataMode] = useState<DataTypeType>("dataset");
 
-    const fetchJson = async (url: string, callback: (x: any) => Promise<void>) => {
+    const [explorerHeight, setExplorerHeight] = useState(150);
+    const resizeStartPosition = useRef(0);
+    const isResizing = useRef(false);
+
+    const [sqlQuery, setSqlQuery] = useState<string>('');
+    const editorRef = useRef<any>(null);
+
+    const [explorerWidth, setExplorerWidth] = useState(320);
+
+    const handleLogout = () => {
+        logout();
+        navigate(`/login?${projectRelatedQueryParams}`);
+    };
+
+    const fetchJson = useCallback(async (urlPath: string, callback: (x: any) => Promise<void>) => {
+        if (!urlPath) return;
+        
         if (!isAuthenticated) {
             try {
                 setIsLoading(true);
-                const response = await fetch(hostname + url);
+                const response = await fetch(hostname + urlPath);
                 if (response.status === 200) {
                     const data = await response.json();
                     await callback(data);
@@ -158,15 +183,17 @@ export default function ExplorerPage() {
                 setIsLoading(false);
             }
         } else {
-            await callJsonAPI(hostname, url, jwtToken, username, callback, setIsLoading, handleLogout);
+            await callJsonAPI(hostname + urlPath, jwtToken, username, callback, setIsLoading, handleLogout);
         }
-    };
+    }, [isAuthenticated]);
 
-    const fetchHTTPResponse = async (url: string, callback: (x: Response) => Promise<void>) => {
+    const fetchHTTPResponse = useCallback(async (urlPath: string, callback: (x: Response) => Promise<void>) => {
+        if (!urlPath) return;
+        
         if (!isAuthenticated) {
             try {
                 setIsLoading(true);
-                const response = await fetch(hostname + url);
+                const response = await fetch(hostname + urlPath);
                 if (response.status === 200) {
                     await callback(response);
                 } else if (response.status === 401) {
@@ -182,14 +209,22 @@ export default function ExplorerPage() {
                 setIsLoading(false);
             }
         } else {
-            await callAPI(hostname, url, jwtToken, username, callback, setIsLoading, handleLogout);
+            await callAPI(hostname + urlPath, jwtToken, username, callback, setIsLoading, handleLogout);
         }
-    };
+    }, [isAuthenticated]);
 
-    const handleLogout = () => {
-        logout();
-        navigate(`/login?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
-    };
+    useEffect(() => {
+        if (!projectMetadataPath) return;
+        fetchJson(projectMetadataPath, async (metadata: ProjectMetadataType) => {
+            try {
+                validateSquirrelsVersion(metadata);
+                setProjectMetadata(metadata);
+            } catch (error: any) {
+                alert(error.message);
+                navigate('/');
+            }
+        });
+    }, [projectMetadataPath]);
 
     const toQueryParams = (paramSelections: Map<string, string[]>) => {
         const queryParams = new URLSearchParams();
@@ -220,6 +255,17 @@ export default function ExplorerPage() {
 
     const getTotalPages = (totalRows: number, limit: number) => Math.ceil(totalRows / limit);
 
+    const getRequestURL = (url: string, paramSelections: Map<string, string[]>, offset: number, limit: number, sqlQuery?: string) => {
+        const queryParams = toQueryParams(paramSelections);
+        queryParams.append('x_offset', offset.toString());
+        queryParams.append('x_limit', limit.toString());
+        queryParams.append('x_orientation', "rows");
+        if (sqlQuery) {
+            queryParams.append('x_sql_query', sqlQuery);
+        }
+        return url + '?' + queryParams;
+    }
+
     const handlePagination = (direction: 'first' | 'prev' | 'next' | 'last') => {
         if (!lastRequest) return;
         
@@ -230,35 +276,25 @@ export default function ExplorerPage() {
             direction === 'next' ? lastRequest.page + 1 :
             totalPages;
         
+        // Reuse the last request but with new offset
+        const offset = (newPage - 1) * lastRequest.limit;
+        const requestURL = getRequestURL(lastRequest.url, lastRequest.paramSelections, offset, lastRequest.limit, lastRequest.sqlQuery);
+
         setLastRequest({
             ...lastRequest,
             page: newPage
         });
 
-        // Reuse the last request but with new offset
-        const offset = (newPage - 1) * lastRequest.limit;
-        const queryParams = toQueryParams(lastRequest.paramSelections);
-        queryParams.append('x_offset', offset.toString());
-        queryParams.append('x_limit', lastRequest.limit.toString());
-        const requestURL = lastRequest.url + '?' + queryParams;
-
-        const callback = async (x: Response) => {
-            const data = (outputFormat === OutputFormatEnum.TABLE) ? await x.json() : 
-                (outputFormat === OutputFormatEnum.PNG) ? btoa(String.fromCharCode(...new Uint8Array(await x.arrayBuffer()))) :
-                (outputFormat === OutputFormatEnum.HTML) ? await x.text() : 
-                null;
+        fetchJson(requestURL, async (data: TableDataType) => {
             setResultContent(data);
-        }
-        fetchHTTPResponse(requestURL, callback);
+        });
     };
 
     const updateTableData = (paramSelections: Map<string, string[]>) => {
         if (resultsURL.current === "") return;
 
-        const queryParams = toQueryParams(paramSelections);
-        queryParams.append('x_offset', '0');  // Reset offset to 0 for page 1
-        queryParams.append('x_limit', configureOptions.limit.toString());
-        const requestURL = resultsURL.current + '?' + queryParams;
+        const offset = 0;  // Reset offset to 0 for page 1
+        const requestURL = getRequestURL(resultsURL.current, paramSelections, offset, configureOptions.limit);
 
         // Save this request for pagination
         setLastRequest({
@@ -278,9 +314,25 @@ export default function ExplorerPage() {
         fetchHTTPResponse(requestURL, callback);
     };
 
-    useEffect(() => {
-        fetchJson(projectMetadataURL, async x => setProjectMetadata(x));
-    }, []);
+    const handleRunQuery = (paramSelections: Map<string, string[]>, query: string) => {
+        if (!query.trim()) return;
+        
+        const offset = 0;  // Reset offset to 0 for page 1
+        const requestURL = getRequestURL(resultsURL.current, paramSelections, offset, configureOptions.limit, query);
+        
+        // Save this request for pagination
+        setLastRequest({
+            url: resultsURL.current,
+            paramSelections: paramSelections,
+            limit: configureOptions.limit,
+            page: 1,
+            sqlQuery: query
+        });
+
+        fetchJson(requestURL, async (data: TableDataType) => {
+            setResultContent(data);
+        });
+    };
 
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -346,7 +398,7 @@ export default function ExplorerPage() {
                                 <div 
                                     className="menu-item"
                                     onClick={() => {
-                                        navigate(`/settings?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+                                        navigate(`/settings?${projectRelatedQueryParams}`);
                                         setShowMenu(false);
                                     }}
                                 >
@@ -357,7 +409,7 @@ export default function ExplorerPage() {
                                 <div 
                                     className="menu-item"
                                     onClick={() => {
-                                        navigate(`/users?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+                                        navigate(`/users?${projectRelatedQueryParams}`);
                                         setShowMenu(false);
                                     }}
                                 >
@@ -453,8 +505,7 @@ export default function ExplorerPage() {
                 login(username, jwtToken, expiryTime, isAdmin);
 
                 // Refresh the page to ensure all components reflect the new auth state
-                const encodedHostname = encodeURIComponent(hostname);
-                window.location.href = `${window.location.pathname}#/explorer?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`;
+                window.location.href = `${window.location.pathname}#/explorer?${projectRelatedQueryParams}`;
                 window.location.reload();
             }
         };
@@ -467,19 +518,98 @@ export default function ExplorerPage() {
         };
     }, [login]);
 
+    const handleResizeMouseDown = (e: React.MouseEvent) => {
+        isResizing.current = true;
+        resizeStartPosition.current = e.clientY;
+        document.addEventListener('mousemove', handleResizeMouseMove);
+        document.addEventListener('mouseup', handleResizeMouseUp);
+        e.preventDefault();
+    };
+
+    const handleResizeMouseMove = (e: MouseEvent) => {
+        if (!isResizing.current) return;
+        const delta = e.clientY - resizeStartPosition.current;
+        setExplorerHeight(prev => Math.max(100, Math.min(window.innerHeight - 200, prev + delta)));
+        resizeStartPosition.current = e.clientY;
+    };
+
+    const handleResizeMouseUp = () => {
+        isResizing.current = false;
+        document.removeEventListener('mousemove', handleResizeMouseMove);
+        document.removeEventListener('mouseup', handleResizeMouseUp);
+    };
+
+    // Clean up event listeners on unmount
+    useEffect(() => {
+        return () => {
+            document.removeEventListener('mousemove', handleResizeMouseMove);
+            document.removeEventListener('mouseup', handleResizeMouseUp);
+        };
+    }, []);
+
+    const handleExplorerWidthChange = (newWidth: number) => {
+        setExplorerWidth(Math.max(200, Math.min(450, newWidth)));
+    };
+
+    // Create a function to generate completions based on model names
+    const createModelCompletions = useCallback(() => {
+        return (context: CompletionContext): CompletionResult | null => {
+            const word = context.matchBefore(/\w*/);
+            if (!word || word.from === word.to && !context.explicit) return null;
+            
+            // Generate completions for all model names
+            const queryableModels = models.filter(model => model.model_type !== "source" || model.config.load_to_duckdb);
+            return {
+                from: word.from,
+                options: queryableModels.map(model => ({
+                    label: model.name,
+                    type: "constant",
+                    info: model.config.description || undefined
+                }))
+            };
+        };
+    }, [models]);
+    
+    // Create the autocompletion extension with model names
+    const autocompleteExtension = useCallback(() => {
+        return autocompletion({
+            override: [createModelCompletions()]
+        });
+    }, [createModelCompletions]);
+
+    // Create a keymap extension for Ctrl+Enter
+    const keymapExtension = useCallback(() => {
+        return Prec.highest(keymap.of([{
+            key: "Mod-Enter",  // Using Mod instead of Ctrl to support both Windows (Ctrl) and Mac (Cmd)
+            run: () => {
+                if (sqlQuery.trim()) {
+                    handleRunQuery(paramSelections.current, sqlQuery);
+                }
+                return true;
+            },
+            preventDefault: true
+        }]));
+    }, [sqlQuery]);
+
     return (
         <> 
             <div id="main-container">
                 <div id="left-container">
                     <div className="left-container-content">
-                        <Settings 
-                            projectMetadata={projectMetadata}
+                        <Settings
+                            projectMetadataPath={projectMetadataPath}
                             parametersURL={parametersURL}
                             resultsURL={resultsURL}
                             fetchJson={fetchJson}
                             setParamData={setParamData}
                             clearTableData={clearTableData}
                             setOutputFormat={setOutputFormat}
+                            isAdmin={isAdmin}
+                            dataMode={dataMode}
+                            toggleDataMode={toggleDataMode}
+                            setModels={setModels}
+                            setConnections={setConnections}
+                            setLineageData={setLineageData}
                         />
                         <br/><hr/><br/>
                         <ParametersContainer 
@@ -488,18 +618,20 @@ export default function ExplorerPage() {
                             refreshWidgetStates={refreshWidgetStates}
                         />
                     </div>
-                    <div className="left-container-footer">
-                        <button 
-                            className="blue-button"
-                            style={{width: '100%'}}
-                            onClick={() => updateTableData(paramSelections.current)}
-                        >
-                            Apply
-                        </button>
-                    </div>
+                    {dataMode !== "model" && (
+                        <div className="left-container-footer">
+                            <button 
+                                className="blue-button"
+                                style={{width: '100%'}}
+                                onClick={() => updateTableData(paramSelections.current)}
+                            >
+                                Apply
+                            </button>
+                        </div>
+                    )}
                 </div>
                 <div id="header-container">
-                    <span style={{margin: "0 0.5rem"}}><b>Project Name:</b> {projectMetadata?.label} ({projectVersion})</span>
+                    <span style={{margin: "0 0.5rem"}}><b>Project Name:</b> {projectMetadata?.label || ''} ({projectVersion})</span>
                     <div className="horizontal-container">
                         <div className="auth-container">
                             {!isAuthenticated ? (
@@ -514,11 +646,92 @@ export default function ExplorerPage() {
                         </div>
                     </div>
                 </div>
-                <div id="table-container">
-                    <div className="table-content">
-                        <ResultTable tableDataObj={resultContent} outputFormat={outputFormat} />
-                    </div>
-                    {paginationContainer}
+                
+                <div id="right-container">
+                    {dataMode === "model" ? (
+                        <div className="table-container">
+                            <div className="model-view-layout">
+                                <ModelExplorer 
+                                    models={models}
+                                    connections={connections}
+                                    width={explorerWidth}
+                                    onWidthChange={handleExplorerWidthChange}
+                                />
+                                <div className="model-view-content" style={{ width: `calc(100% - ${explorerWidth}px)` }}>
+                                    <div className="sql-editor-container" style={{ height: `${explorerHeight}px` }}>
+                                        <div className="sql-editor-label">
+                                            SQL Query Editor
+                                        </div>
+                                        <CodeMirror
+                                            value={sqlQuery}
+                                            height="calc(100% - 50px)"
+                                            onChange={(value) => setSqlQuery(value)}
+                                            extensions={[
+                                                sql(),
+                                                autocompleteExtension(),
+                                                keymapExtension()
+                                            ]}
+                                            basicSetup={{
+                                                lineNumbers: true,
+                                                highlightActiveLineGutter: true,
+                                                highlightSpecialChars: true,
+                                                foldGutter: true,
+                                                indentOnInput: true,
+                                                bracketMatching: true,
+                                                closeBrackets: true,
+                                                autocompletion: true,
+                                                highlightSelectionMatches: true,
+                                                tabSize: 2,
+                                            }}
+                                            placeholder="Write your SQL query here... (Press Ctrl+Enter to run)"
+                                            className="sql-editor"
+                                            onCreateEditor={(editor) => {
+                                                editorRef.current = editor;
+                                            }}
+                                        />
+                                        <div className="sql-editor-actions">
+                                            <button 
+                                                className="white-button clear-query-button"
+                                                onClick={() => setSqlQuery('')}
+                                                disabled={!sqlQuery}
+                                            >
+                                                Clear
+                                            </button>
+                                            <button 
+                                                className="blue-button run-query-button"
+                                                onClick={() => handleRunQuery(paramSelections.current, sqlQuery)}
+                                                disabled={!sqlQuery.trim()}
+                                            >
+                                                Run Query
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div 
+                                        className="resize-handle"
+                                        onMouseDown={handleResizeMouseDown}
+                                    ></div>
+                                    <ResultTable 
+                                        tableDataObj={resultContent} 
+                                        outputFormat={OutputFormatEnum.TABLE} 
+                                        paginationContainer={paginationContainer}
+                                        tableContentStyle={{ height: `calc(100% - ${explorerHeight}px - 10px)` }}
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ) : dataMode === "lineage" ? (
+                        <div className="table-container">
+                            <LineageGraph lineageData={lineageData} models={models} />
+                        </div>
+                    ) : (
+                        <div className="table-container">
+                            <ResultTable 
+                                tableDataObj={resultContent} 
+                                outputFormat={outputFormat} 
+                                paginationContainer={paginationContainer}
+                            />
+                        </div>
+                    )}
                 </div>
             </div>
 

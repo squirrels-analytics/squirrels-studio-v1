@@ -1,13 +1,7 @@
 export interface ProjectMetadataType {
     name: string;
+    version: string;
     label: string;
-    versions: {
-        major_version: number;
-        token_path: string;
-        data_catalog_path: string;
-    }[];
-}
-
-export interface CatalogDataType {
-    projects: ProjectMetadataType[];
+    description: string;
+    squirrels_version: string; // Ex. a semantic version like "0.1.0"
 }

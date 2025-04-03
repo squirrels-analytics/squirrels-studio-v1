@@ -7,7 +7,7 @@ import Slider from 'rc-slider';
 import 'rc-slider/assets/index.css';
 
 import { ParameterType, SingleSelectParameterType, MultiSelectParameterType, DateParameterType, DateRangeParameterType, NumberParameterType, NumberRangeParameterType, TextParameterType } from "../types/ParametersResponse";
-import log from '../utils/log';
+import { log } from '../utils';
 import './ParameterWidgets.css';
 
 
@@ -419,6 +419,7 @@ interface ParametersContainerProps {
 }
 
 export function ParametersContainer({ paramData, paramSelections, refreshWidgetStates }: ParametersContainerProps) {
+    console.log("paramData", paramData);
     if (paramData === null) return <></>;
 
     const widgets = paramData.map(obj => {

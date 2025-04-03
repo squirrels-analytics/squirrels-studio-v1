@@ -7,5 +7,9 @@ export interface TableDataType {
         dimensions: string[];
     };
     total_num_rows: number;
-    data: Record<string, any>[];
+    data_details: {
+        num_rows: number;
+        orientation: "rows";
+    };
+    data: any[][];
 }

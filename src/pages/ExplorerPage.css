@@ -75,3 +75,177 @@
   width: 100%;
   margin: 0;
 }
+
+.resize-handle {
+    height: 10px;
+    background-color: #f0f0f0;
+    cursor: ns-resize;
+    border-top: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.resize-handle::after {
+    content: "";
+    height: 4px;
+    width: 40px;
+    background-color: #ddd;
+    border-radius: 2px;
+}
+
+.resize-handle:hover::after {
+    background-color: #999;
+}
+
+.table-container {
+  background-color: var(--surface);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-md);
+  padding: 1rem 1rem 0 1rem;
+  position: fixed;
+  top: 6.5rem;
+  right: 1rem;
+  bottom: 1rem;
+  left: 24rem;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.model-view-layout {
+  display: flex;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  position: relative;
+}
+
+.model-view-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-left: 1rem;
+}
+
+.table-content {
+  flex: 1;
+  overflow: auto;
+  margin-bottom: 1rem;
+}
+
+/* Add these styles to your ExplorerPage.css */
+.model-view-container {
+    height: 100%;
+    overflow: hidden;
+}
+
+/* Add these styles for the SQL editor in the right panel */
+.sql-editor-container {
+  position: relative;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #ccc;
+  padding-bottom: 1rem;
+}
+
+.sql-editor-label {
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: var(--text-secondary, #555);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sql-editor {
+  flex: 1;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  margin-bottom: 10px;
+  overflow: hidden;
+}
+
+.sql-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+/* Override some CodeMirror default styles to match our app theme */
+.sql-editor .cm-editor {
+  height: 100%;
+  font-size: 14px;
+}
+
+.sql-editor .cm-scroller {
+  overflow: auto;
+  line-height: 1.5;
+}
+
+/* Syntax highlighting colors */
+.sql-editor .cm-keyword {
+  color: #0033b3;
+  font-weight: bold;
+}
+
+.sql-editor .cm-operator {
+  color: #8959a8;
+}
+
+.sql-editor .cm-number {
+  color: #164;
+}
+
+.sql-editor .cm-string {
+  color: #a31515;
+}
+
+.sql-editor .cm-comment {
+  color: #008000;
+  font-style: italic;
+}
+
+.sql-editor .cm-function {
+  color: #795e26;
+}
+
+.run-query-button {
+  align-self: flex-end;
+}
+
+.model-inserted-notification {
+  background-color: #4caf50;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.lineage-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto; /* Push other buttons to the right */
+}
+
+.lineage-button svg {
+  font-size: 14px;
+}
+
+.lineage-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}

@@ -4,7 +4,7 @@ import { useAuth } from '../Router';
 import { FaKey, FaLock, FaTrash, FaPlus, FaInfinity, FaCopy, FaExclamationTriangle } from 'react-icons/fa';
 import LoadingSpinner from '../components/LoadingSpinner';
 import './UserSettingsPage.css';
-import { getHashParams } from '../utils/urlParams';
+import { getHashParams, getProjectMetadataPath } from '../utils';
 
 interface Token {
   token_id: string;
@@ -48,7 +48,7 @@ export default function UserSettingsPage() {
     return null;
   }
   const encodedHostname = encodeURIComponent(hostname);
-  const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
+  const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
 
   // Fetch user tokens on component mount
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function UserSettingsPage() {
   const fetchTokens = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${hostname}${projectMetadataURL}/tokens`, {
+      const response = await fetch(`${hostname}${projectMetadataPath}/tokens`, {
         headers: {
           'Authorization': `Bearer ${jwtToken}`
         }
@@ -96,7 +96,7 @@ export default function UserSettingsPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${projectMetadataURL}/tokens`, {
+      const response = await fetch(`${hostname}${projectMetadataPath}/tokens`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,
@@ -154,7 +154,7 @@ export default function UserSettingsPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${projectMetadataURL}/tokens/${tokenId}`, {
+      const response = await fetch(`${hostname}${projectMetadataPath}/tokens/${tokenId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${jwtToken}`
@@ -188,7 +188,7 @@ export default function UserSettingsPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${projectMetadataURL}/change-password`, {
+      const response = await fetch(`${hostname}${projectMetadataPath}/change-password`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${jwtToken}`,

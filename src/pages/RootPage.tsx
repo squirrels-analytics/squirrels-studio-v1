@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './RootPage.css';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { getProjectMetadataPath, getProjectRelatedQueryParams, validateSquirrelsVersion } from '../utils';
+import { ProjectMetadataType } from '../types/ProjectMetadataResponse';
 
 export default function RootPage() {
   const navigate = useNavigate();
@@ -40,15 +42,18 @@ export default function RootPage() {
       if (!formData.hostname.startsWith('http://') && !formData.hostname.startsWith('https://')) {
         throw new Error('Host URL must start with http:// or https://');
       }
-      const projectMetadataURL = `${formData.hostname}/api/squirrels-v0/project/${formData.projectName}/${formData.projectVersion}`;
-      const response = await fetch(projectMetadataURL);
+      const projectMetadataPath = getProjectMetadataPath(formData.projectName, formData.projectVersion);
+      const response = await fetch(formData.hostname + projectMetadataPath);
       if (!response.ok) {
         throw new Error(`Connection failed: ${response.status} ${response.statusText}`);
       }
-      await response.json();
+      
+      const metadata: ProjectMetadataType = await response.json();
+      validateSquirrelsVersion(metadata);
       
       // If connection is successful, navigate to login
-      navigate(`/login?host=${encodeURIComponent(formData.hostname)}&projectName=${formData.projectName}&projectVersion=${formData.projectVersion}`);
+      const projectRelatedQueryParams = getProjectRelatedQueryParams(formData.hostname, formData.projectName, formData.projectVersion);
+      navigate(`/login?${projectRelatedQueryParams}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connection failed: Unknown error');
     } finally {

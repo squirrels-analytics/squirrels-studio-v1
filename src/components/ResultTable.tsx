@@ -2,19 +2,15 @@ import './ResultTable.css'
 
 import { TableDataType } from '../types/DatasetResponse.tsx'
 import { OutputFormatEnum } from '../types/DataCatalogResponse.tsx';
-import log from '../utils/log.tsx';
+import { log } from '../utils';
 
 
-interface ResultTableProps {
+interface ResultTableContentProps {
     tableDataObj: TableDataType | string | null;
     outputFormat: OutputFormatEnum;
 }
 
-export default function ResultTable({ tableDataObj, outputFormat }: ResultTableProps) {
-    if (tableDataObj === null || outputFormat === OutputFormatEnum.UNSET) {
-        log("no table data to render");
-        return (<></>);
-    }
+function ResultTableContent({ tableDataObj, outputFormat }: ResultTableContentProps) {
     if (outputFormat === OutputFormatEnum.HTML) {
         log("rendering html")
         return (<iframe srcDoc={tableDataObj as string} style={{minWidth: "100%", minHeight: "100%"}} />);
@@ -33,9 +29,9 @@ export default function ResultTable({ tableDataObj, outputFormat }: ResultTableP
             </tr>
         );
 
-        const dataComponents = tableObj.data.map((rowObj, rowNum) =>
+        const dataComponents = tableObj.data.map((rowData, rowNum) =>
             <tr key={rowNum}>
-                { fields.map((field, colNum) => <td key={colNum}>{rowObj[field.name]}</td>) }
+                { rowData.map((cellData, colNum) => <td key={colNum}>{cellData}</td>) }
             </tr>
         );
         
@@ -50,4 +46,30 @@ export default function ResultTable({ tableDataObj, outputFormat }: ResultTableP
         console.error(`Unexpected output format: ${OutputFormatEnum[outputFormat]}`)
         return (<></>);
     }
+}
+
+interface ResultTableProps {
+    tableDataObj: TableDataType | string | null;
+    outputFormat: OutputFormatEnum;
+    paginationContainer: React.ReactNode;
+    tableContentStyle?: React.CSSProperties;
+}
+
+export default function ResultTable({ tableDataObj, outputFormat, paginationContainer, tableContentStyle }: ResultTableProps) {
+    if (tableDataObj === null || outputFormat === OutputFormatEnum.UNSET) {
+        log("no table data to render");
+        return (<></>);
+    }
+    
+    return (
+    <>
+        <div className="table-content" style={tableContentStyle}>
+            <ResultTableContent 
+                tableDataObj={tableDataObj} 
+                outputFormat={outputFormat} 
+            />
+        </div>
+        {paginationContainer}
+    </>
+    )
 }

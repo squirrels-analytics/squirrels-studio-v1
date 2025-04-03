@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../Router';
 import LoadingSpinner from '../components/LoadingSpinner';
 import './LoginPage.css';
-import { getHashParams } from '../utils/urlParams';
+import { getHashParams, getProjectMetadataPath, getProjectRelatedQueryParams } from '../utils';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login, logout } = useAuth();
+  const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [formData, setFormData] = useState({
@@ -20,17 +20,14 @@ export default function LoginPage() {
   const projectName = searchParams.get('projectName');
   const projectVersion = searchParams.get('projectVersion');
 
+  const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
+  const projectRelatedQueryParams = getProjectRelatedQueryParams(hostname, projectName, projectVersion);
+
   useEffect(() => {
-    if (!hostname || !projectName || !projectVersion) {
+    if (!hostname || !projectMetadataPath) {
       navigate('/');
     }
-  }, [hostname, projectName, projectVersion, navigate, logout]);
-
-  if (!hostname || !projectName || !projectVersion) {
-    return null;
-  }
-  const encodedHostname = encodeURIComponent(hostname);
-  const projectMetadataURL = `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
+  }, [hostname, projectMetadataPath, navigate]);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -41,7 +38,7 @@ export default function LoginPage() {
   };
 
   const handleGuestAccess = () => {
-    navigate(`/explorer?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+    navigate(`/explorer?${projectRelatedQueryParams}`);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -55,8 +52,8 @@ export default function LoginPage() {
       loginData.append('username', formData.username);
       loginData.append('password', formData.password);
       
-      const loginURL = `${projectMetadataURL}/login`;
-      const response = await fetch(hostname + loginURL, {
+      const loginPath = `${projectMetadataPath}/login`;
+      const response = await fetch(hostname + loginPath, {
         method: 'POST',
         body: loginData
       });
@@ -64,7 +61,7 @@ export default function LoginPage() {
       if (response.status === 200) {
         const data = await response.json();
         login(data.username, data.access_token, data.expiry_time, data.is_admin);
-        navigate(`/explorer?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+        navigate(`/explorer?${projectRelatedQueryParams}`);
       } else if (response.status === 401) {
         setError('Invalid username or password');
       } else {
@@ -94,12 +91,12 @@ export default function LoginPage() {
         </div>
         <div style={{ textAlign: 'center' }}>
           <div className="api-docs-buttons">
-            <a href={`${hostname}${projectMetadataURL}/redoc`} target="_blank" rel="noopener noreferrer">
+            <a href={`${hostname}${projectMetadataPath}/redoc`} target="_blank" rel="noopener noreferrer">
               <button className="blue-button">
                 <span>ReDoc API Docs</span>
               </button>
             </a>
-            <a href={`${hostname}${projectMetadataURL}/docs`} target="_blank" rel="noopener noreferrer">
+            <a href={`${hostname}${projectMetadataPath}/docs`} target="_blank" rel="noopener noreferrer">
               <button className="white-button">
                 <span>Swagger API Docs</span>
               </button>

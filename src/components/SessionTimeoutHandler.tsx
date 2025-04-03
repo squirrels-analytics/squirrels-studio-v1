@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../Router';
+import { getProjectRelatedQueryParams } from '../utils';
 
 interface SessionTimeoutHandlerProps {
   hostname: string;
@@ -16,11 +17,12 @@ export default function SessionTimeoutHandler({
   const navigate = useNavigate();
   const { isAuthenticated, expiryTime, logout } = useAuth();
   const userTimeoutId = useRef<number>(0);
+  const projectRelatedQueryParams = getProjectRelatedQueryParams(hostname, projectName, projectVersion);
 
   const handleLogout = () => {
     clearTimeout(userTimeoutId.current);
     logout();
-    navigate(`/login?host=${encodeURIComponent(hostname)}&projectName=${projectName}&projectVersion=${projectVersion}`);
+    navigate(`/login?${projectRelatedQueryParams}`);
     alert("User session expired");
   };
 
