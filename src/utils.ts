@@ -1,6 +1,6 @@
 import { ProjectMetadataType } from './types/ProjectMetadataResponse';
 
-const DEBUG_MODE = true;
+const DEBUG_MODE = false;
 
 export function log(...data: any[]) {
   if (DEBUG_MODE) {

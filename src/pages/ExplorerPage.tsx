@@ -89,7 +89,7 @@ async function callAPI(
     }
     catch(error) {
         console.error(error);
-        alert("An unexpected error occurred")
+        // alert("An unexpected error occurred")
     }
 
     setIsLoading(false);
@@ -178,7 +178,7 @@ export default function ExplorerPage() {
                 }
             } catch (error) {
                 console.error(error);
-                alert("An unexpected error occurred");
+                // alert("An unexpected error occurred");
             } finally {
                 setIsLoading(false);
             }
@@ -204,7 +204,7 @@ export default function ExplorerPage() {
                 }
             } catch (error) {
                 console.error(error);
-                alert("An unexpected error occurred");
+                // alert("An unexpected error occurred");
             } finally {
                 setIsLoading(false);
             }
