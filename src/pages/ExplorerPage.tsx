@@ -62,36 +62,39 @@ async function callAPI(
     setIsLoading: (x: boolean) => void, logout: () => void
 ) {
     setIsLoading(true);
-    
+
     try {
+        const authorization = jwtToken ? `Bearer ${jwtToken}` : "";
         const response = await fetch(url, {
             headers: {
-                'Authorization': `Bearer ${jwtToken}`
+                'Authorization': authorization
             }
         });
 
-        const appliedUsername = response.headers.get("Applied-Username");
+        const appliedUsername = jwtToken ? response.headers.get("Applied-Username") : null;
 
         // appliedUsername is null for APIs that aren't impacted by auth, or under certain 400/500 error statuses
         // Also, if logged in but server restarted, token no longer works so we get 401 error. Should logout in this case
         const hasAppliedUsername = (appliedUsername !== null || response.status === 401)
-        if (hasAppliedUsername && username !== "" && appliedUsername !== username) {
+        if (hasAppliedUsername && username && appliedUsername !== username) {
             alert("User session was invalidated by the server... Logging out.");
             logout();
         }
         if (response.status === 200) {
             await callback(response);
         }
+        else if (response.status === 401) {
+            alert("This resource requires authentication");
+        }
         else {
             const data = await response.json();
-            alert(data.message);
+            console.error(data.message || "An error occurred");
         }
     }
     catch(error) {
         console.error(error);
-        // alert("An unexpected error occurred")
     }
-
+    
     setIsLoading(false);
 }
 
@@ -162,56 +165,13 @@ export default function ExplorerPage() {
 
     const fetchJson = useCallback(async (urlPath: string, callback: (x: any) => Promise<void>) => {
         if (!urlPath) return;
-        
-        if (!isAuthenticated) {
-            try {
-                setIsLoading(true);
-                const response = await fetch(hostname + urlPath);
-                if (response.status === 200) {
-                    const data = await response.json();
-                    await callback(data);
-                } else if (response.status === 401) {
-                    alert("This resource requires authentication");
-                } else {
-                    const data = await response.json();
-                    alert(data.message || "An error occurred");
-                }
-            } catch (error) {
-                console.error(error);
-                // alert("An unexpected error occurred");
-            } finally {
-                setIsLoading(false);
-            }
-        } else {
-            await callJsonAPI(hostname + urlPath, jwtToken, username, callback, setIsLoading, handleLogout);
-        }
-    }, [isAuthenticated]);
+        await callJsonAPI(hostname + urlPath, jwtToken, username, callback, setIsLoading, handleLogout);
+    }, [jwtToken, username]);
 
     const fetchHTTPResponse = useCallback(async (urlPath: string, callback: (x: Response) => Promise<void>) => {
         if (!urlPath) return;
-        
-        if (!isAuthenticated) {
-            try {
-                setIsLoading(true);
-                const response = await fetch(hostname + urlPath);
-                if (response.status === 200) {
-                    await callback(response);
-                } else if (response.status === 401) {
-                    alert("This resource requires authentication");
-                } else {
-                    const data = await response.json();
-                    alert(data.message || "An error occurred");
-                }
-            } catch (error) {
-                console.error(error);
-                // alert("An unexpected error occurred");
-            } finally {
-                setIsLoading(false);
-            }
-        } else {
-            await callAPI(hostname + urlPath, jwtToken, username, callback, setIsLoading, handleLogout);
-        }
-    }, [isAuthenticated]);
+        await callAPI(hostname + urlPath, jwtToken, username, callback, setIsLoading, handleLogout);
+    }, [jwtToken, username]);
 
     useEffect(() => {
         if (!projectMetadataPath) return;
@@ -220,7 +180,7 @@ export default function ExplorerPage() {
                 validateSquirrelsVersion(metadata);
                 setProjectMetadata(metadata);
             } catch (error: any) {
-                alert(error.message);
+                console.error(error.message);
                 navigate('/');
             }
         });
@@ -618,7 +578,7 @@ export default function ExplorerPage() {
                             refreshWidgetStates={refreshWidgetStates}
                         />
                     </div>
-                    {dataMode !== "model" && (
+                    {dataMode !== "model" && dataMode !== "lineage" && (
                         <div className="left-container-footer">
                             <button 
                                 className="blue-button"
