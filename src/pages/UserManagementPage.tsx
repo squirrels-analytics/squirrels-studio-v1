@@ -164,7 +164,8 @@ export default function UserManagementPage() {
         setSuccessMessage('User deleted successfully');
         fetchUsers();
       } else {
-        setError('Failed to delete user');
+        const data = await response.json();
+        setError(data.message || 'Failed to delete user');
       }
     } catch (error) {
       console.error('Error deleting user:', error);
@@ -307,10 +308,9 @@ export default function UserManagementPage() {
                     <td>
                       <div className="action-buttons">
                         <button 
-                          className={`icon-button edit-button ${user.username === "admin" ? "disabled-button" : ""}`}
+                          className={`icon-button edit-button`}
                           onClick={() => handleEditUser(user)}
-                          title={user.username === "admin" ? "Cannot edit admin user" : "Edit user"}
-                          disabled={user.username === "admin"}
+                          title="Edit user"
                         >
                           <FaEdit />
                         </button>
@@ -479,6 +479,7 @@ export default function UserManagementPage() {
                       type="checkbox"
                       checked={editUserData.is_admin}
                       onChange={(e) => setEditUserData({...editUserData, is_admin: e.target.checked})}
+                      disabled={editUserData.username === "admin"}
                     />
                     Admin User
                   </label>

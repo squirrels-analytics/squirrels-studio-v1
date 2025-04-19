@@ -21,6 +21,7 @@ import { getHashParams, getProjectMetadataPath, getProjectRelatedQueryParams, va
 import ModelExplorer from '../components/ModelExplorer';
 import LineageGraph from '../components/LineageGraph';
 import { ProjectMetadataType } from '../types/ProjectMetadataResponse.js';
+import Modal from '../components/Modal';
 
 interface ConfigureOptions {
   limit: number;
@@ -59,7 +60,7 @@ async function copyTableData(tableData: TableDataType): Promise<string | null> {
 
 async function callAPI(
     url: string, jwtToken: string, username: string, callback: (x: Response) => Promise<void>, 
-    setIsLoading: (x: boolean) => void, logout: () => void
+    setIsLoading: (x: boolean) => void, logout: () => void, showModal: (message: string, title?: string) => void
 ) {
     setIsLoading(true);
 
@@ -74,21 +75,20 @@ async function callAPI(
         const appliedUsername = jwtToken ? response.headers.get("Applied-Username") : null;
 
         // appliedUsername is null for APIs that aren't impacted by auth, or under certain 400/500 error statuses
-        // Also, if logged in but server restarted, token no longer works so we get 401 error. Should logout in this case
-        const hasAppliedUsername = (appliedUsername !== null || response.status === 401)
-        if (hasAppliedUsername && username && appliedUsername !== username) {
-            alert("User session was invalidated by the server... Logging out.");
+        if (appliedUsername && username && appliedUsername !== username) {
+            showModal("User session was invalidated by the server... Logging out.", "Authentication Error");
             logout();
         }
         if (response.status === 200) {
             await callback(response);
         }
         else if (response.status === 401) {
-            alert("This resource requires authentication");
+            showModal("This resource requires authentication", "Authentication Error");
         }
         else {
             const data = await response.json();
             console.error(data.message || "An error occurred");
+            showModal(data.message || "An unexpected server error occurred", "Error");
         }
     }
     catch(error) {
@@ -100,13 +100,13 @@ async function callAPI(
 
 async function callJsonAPI(
     url: string, jwtToken: string, username: string, callback: (x: any) => Promise<void>, 
-    setIsLoading: (x: boolean) => void, logout: () => void
+    setIsLoading: (x: boolean) => void, logout: () => void, showModal: (message: string, title?: string) => void
 ) {
     const newCallback = async (x: Response) => {
         const data = await x.json();
         await callback(data);
     };
-    await callAPI(url, jwtToken, username, newCallback, setIsLoading, logout);
+    await callAPI(url, jwtToken, username, newCallback, setIsLoading, logout, showModal);
 }
 
 export default function ExplorerPage() {
@@ -158,6 +158,20 @@ export default function ExplorerPage() {
 
     const [explorerWidth, setExplorerWidth] = useState(320);
 
+    const [modalConfig, setModalConfig] = useState<{
+        isOpen: boolean; message: string; title?: string;
+    }>({
+        isOpen: false, message: '', title: undefined
+    });
+
+    const showModal = (message: string, title?: string) => {
+        setModalConfig({ isOpen: true, message, title });
+    };
+
+    const closeModal = () => {
+        setModalConfig({ isOpen: false, message: '', title: undefined });
+    };
+
     const handleLogout = () => {
         logout();
         navigate(`/login?${projectRelatedQueryParams}`);
@@ -165,12 +179,12 @@ export default function ExplorerPage() {
 
     const fetchJson = useCallback(async (urlPath: string, callback: (x: any) => Promise<void>) => {
         if (!urlPath) return;
-        await callJsonAPI(hostname + urlPath, jwtToken, username, callback, setIsLoading, handleLogout);
+        await callJsonAPI(hostname + urlPath, jwtToken, username, callback, setIsLoading, handleLogout, showModal);
     }, [jwtToken, username]);
 
     const fetchHTTPResponse = useCallback(async (urlPath: string, callback: (x: Response) => Promise<void>) => {
         if (!urlPath) return;
-        await callAPI(hostname + urlPath, jwtToken, username, callback, setIsLoading, handleLogout);
+        await callAPI(hostname + urlPath, jwtToken, username, callback, setIsLoading, handleLogout, showModal);
     }, [jwtToken, username]);
 
     useEffect(() => {
@@ -318,9 +332,9 @@ export default function ExplorerPage() {
         const text = await copyTableData(resultContent as TableDataType);
         if (text) {
             navigator.clipboard.writeText(text).then(() => {
-                alert("Table copied to clipboard!");
+                showModal("Table copied to clipboard!", "Success");
             }, () => {
-                alert("ERROR: Table failed to copy");
+                showModal("Table failed to copy", "Error");
             });
         }
     };
@@ -696,6 +710,13 @@ export default function ExplorerPage() {
             </div>
 
             <LoadingSpinner isLoading={isLoading} />
+            <Modal
+                isOpen={modalConfig.isOpen}
+                onClose={closeModal}
+                title={modalConfig.title}
+            >
+                {modalConfig.message}
+            </Modal>
         </>
     );
 } 
