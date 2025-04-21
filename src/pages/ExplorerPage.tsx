@@ -580,7 +580,11 @@ export default function ExplorerPage() {
                             setOutputFormat={setOutputFormat}
                             isAdmin={isAdmin}
                             dataMode={dataMode}
-                            toggleDataMode={toggleDataMode}
+                            toggleDataMode={(newMode) => {
+                                toggleDataMode(newMode);
+                                // Clear previous result content when switching modes to prevent rendering issues
+                                setResultContent(null);
+                            }}
                             setModels={setModels}
                             setConnections={setConnections}
                             setLineageData={setLineageData}
@@ -650,7 +654,7 @@ export default function ExplorerPage() {
                                                 highlightActiveLineGutter: true,
                                                 highlightSpecialChars: true,
                                                 foldGutter: true,
-                                                indentOnInput: true,
+                                                indentOnInput: false,
                                                 bracketMatching: true,
                                                 closeBrackets: true,
                                                 autocompletion: true,

@@ -56,7 +56,11 @@ interface ResultTableProps {
 }
 
 export default function ResultTable({ tableDataObj, outputFormat, paginationContainer, tableContentStyle }: ResultTableProps) {
-    if (tableDataObj === null || outputFormat === OutputFormatEnum.UNSET) {
+    if (
+        tableDataObj === null ||
+        outputFormat === OutputFormatEnum.UNSET ||
+        (outputFormat === OutputFormatEnum.TABLE && typeof tableDataObj !== 'object')
+    ) {
         log("no table data to render");
         return (<></>);
     }

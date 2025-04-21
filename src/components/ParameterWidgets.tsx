@@ -419,7 +419,6 @@ interface ParametersContainerProps {
 }
 
 export function ParametersContainer({ paramData, paramSelections, refreshWidgetStates }: ParametersContainerProps) {
-    console.log("paramData", paramData);
     if (paramData === null) return <></>;
 
     const widgets = paramData.map(obj => {

@@ -79,7 +79,6 @@ export default function Settings({
         clearTableData();
 
         log("setting parameter data with dataMode", dataMode)
-        console.log("dataObj", dataObj);
         if (dataMode === "model") {
             parametersURL.current = `${projectMetadataPath}/parameters`;
             resultsURL.current = `${projectMetadataPath}/query-models`;
@@ -94,13 +93,10 @@ export default function Settings({
         else {
             parametersURL.current = "";
             resultsURL.current = "";
-            console.log("setting paramData to null");
             setParamData(null);
         }
 
-        console.log("parametersURL.current", parametersURL.current);
         if (parametersURL.current) {
-            console.log("fetching parameters from", parametersURL.current);
             fetchJson(parametersURL.current, async (x: ParamDataType) => { setParamData(x.parameters) });
         }
     }, [dataMode, dataObj]);
