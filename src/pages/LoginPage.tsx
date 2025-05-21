@@ -66,16 +66,16 @@ export default function LoginPage() {
     navigate(`/explorer?${projectRelatedQueryParams}`);
   };
 
-  const handleProviderLogin = async (providerName: string) => {
+  const handleProviderLogin = async (providerName: string, providerLabel: string) => {
     setIsLoading(true);
     try {
       const response = await fetch(`${hostname}${projectMetadataPath}/providers/${providerName}/login`);
       if (response.ok) {
         const data = await response.json();
-        login(data.username, data.access_token, data.expiry_time, data.is_admin);
-        navigate(`/explorer?${projectRelatedQueryParams}`);
+        // Redirect to the OAuth provider's login page
+        window.location.href = data.auth_url;
       } else {
-        setError(`Failed to login with ${providerName}`);
+        setError(`Failed to login with ${providerLabel}`);
       }
     } catch (error) {
       console.error(error);
@@ -191,7 +191,7 @@ export default function LoginPage() {
                 key={provider.name}
                 type="button"
                 className="white-button provider-button"
-                onClick={() => handleProviderLogin(provider.name)}
+                onClick={() => handleProviderLogin(provider.name, provider.label)}
                 disabled={isLoading}
               >
                 {provider.icon && (
