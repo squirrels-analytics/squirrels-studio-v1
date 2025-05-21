@@ -289,7 +289,7 @@ export default function UserManagementPage() {
             <table className="users-table">
               <thead>
                 <tr>
-                  <th>Username</th>
+                  <th>Username / Email</th>
                   <th>Admin</th>
                   {userFields.map(field => (
                     <th key={field.name}>{field.name}</th>
@@ -333,13 +333,13 @@ export default function UserManagementPage() {
       </div>
 
       {showCreateModal && (
-        <div className="modal-background" onClick={() => setShowCreateModal(false)}>
-          <div className="modal-content user-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-background" onMouseDown={() => setShowCreateModal(false)}>
+          <div className="modal-content user-modal" onMouseDown={e => e.stopPropagation()}>
             <h2>Create New User</h2>
             <form onSubmit={handleCreateUser}>
               <div className="scrollable-form">
                 <div className="form-group">
-                  <label htmlFor="username">Username</label>
+                  <label htmlFor="username">Username / Email</label>
                   <input
                     type="text"
                     id="username"
@@ -457,13 +457,13 @@ export default function UserManagementPage() {
       )}
 
       {showEditModal && (
-        <div className="modal-background" onClick={() => setShowEditModal(false)}>
-          <div className="modal-content user-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-background" onMouseDown={() => setShowEditModal(false)}>
+          <div className="modal-content user-modal" onMouseDown={e => e.stopPropagation()}>
             <h2>Edit User</h2>
             <form onSubmit={handleUpdateUser}>
               <div className="scrollable-form">
                 <div className="form-group">
-                  <label htmlFor="edit-username">Username</label>
+                  <label htmlFor="edit-username">Username / Email</label>
                   <input
                     type="text"
                     id="edit-username"

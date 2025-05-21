@@ -62,29 +62,29 @@
   font-weight: 500;
 }
 
-.token-input-group {
+.api-key-input-group {
   display: flex;
   gap: 0.5rem;
 }
 
-.token-input-group input {
+.api-key-input-group input {
   flex: 1;
 }
 
-.tokens-table {
+.api-keys-table {
   width: 100%;
   border-collapse: collapse;
   margin-top: 1rem;
 }
 
-.tokens-table th,
-.tokens-table td {
+.api-keys-table th,
+.api-keys-table td {
   padding: 0.75rem;
   text-align: left;
   border-bottom: 1px solid var(--border);
 }
 
-.tokens-table th {
+.api-keys-table th {
   font-weight: 600;
   background-color: var(--background);
 }
@@ -107,7 +107,7 @@
   color: var(--danger);
 }
 
-.new-token-alert {
+.new-api-key-alert {
   background-color: var(--success-bg);
   border: 1px solid var(--success);
   border-radius: var(--radius-md);
@@ -115,7 +115,7 @@
   margin-bottom: 1.5rem;
 }
 
-.token-display {
+.api-key-display {
   background-color: var(--background);
   padding: 0.75rem;
   border-radius: var(--radius-sm);
@@ -126,7 +126,7 @@
   overflow-x: auto;
 }
 
-.token-display code {
+.api-key-display code {
   font-family: monospace;
   word-break: break-all;
 }
@@ -147,7 +147,7 @@
   margin-bottom: 1.5rem;
 }
 
-.token-expiry-options {
+.api-key-expiry-options {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -175,7 +175,7 @@
   width: 100px;
 }
 
-.create-token-button {
+.create-api-key-button {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -190,7 +190,7 @@
   font-style: italic;
 }
 
-.token-input-group {
+.api-key-input-group {
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -218,20 +218,20 @@
   box-shadow: var(--shadow-md);
 }
 
-.token-modal {
+.api-key-modal {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
 
-.token-modal-header {
+.api-key-modal-header {
   display: flex;
   align-items: center;
   gap: 1rem;
   color: var(--danger);
 }
 
-.token-modal-header h2 {
+.api-key-modal-header h2 {
   margin: 0;
   color: var(--danger);
 }
@@ -240,14 +240,14 @@
   font-size: 1.5rem;
 }
 
-.token-modal-message {
+.api-key-modal-message {
   font-size: 1rem;
   line-height: 1.5;
   color: var(--text);
   margin: 0;
 }
 
-.token-display {
+.api-key-display {
   background-color: var(--background);
   padding: 1rem;
   border-radius: var(--radius-sm);
@@ -258,7 +258,7 @@
   border: 1px solid var(--border);
 }
 
-.token-display code {
+.api-key-display code {
   font-family: monospace;
   word-break: break-all;
   flex: 1;
@@ -282,7 +282,7 @@
   background-color: var(--background);
 }
 
-.token-copied-message {
+.api-key-copied-message {
   color: var(--success);
   font-size: 0.875rem;
   display: flex;
@@ -290,13 +290,13 @@
   justify-content: center;
 }
 
-.token-modal-actions {
+.api-key-modal-actions {
   display: flex;
   justify-content: flex-end;
   margin-top: 1rem;
 }
 
-.token-modal-actions .blue-button:disabled {
+.api-key-modal-actions .blue-button:disabled {
   background-color: #a0aec0;
   color: rgba(255, 255, 255, 0.8);
   cursor: not-allowed;
@@ -304,13 +304,13 @@
   transform: none;
 }
 
-.token-modal-actions .blue-button:disabled:hover {
+.api-key-modal-actions .blue-button:disabled:hover {
   background-color: #a0aec0;
   transform: none;
   box-shadow: none;
 }
 
-.token-expiry-row {
+.api-key-expiry-row {
   display: flex;
   align-items: center;
   gap: 1.5rem;

@@ -5,11 +5,18 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import './LoginPage.css';
 import { getHashParams, getProjectMetadataPath, getProjectRelatedQueryParams } from '../utils';
 
+interface Provider {
+  name: string;
+  label: string;
+  icon: string;
+}
+
 export default function LoginPage() {
   const navigate = useNavigate();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [providers, setProviders] = useState<Provider[]>([]);
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -29,6 +36,24 @@ export default function LoginPage() {
     }
   }, [hostname, projectMetadataPath, navigate]);
 
+  useEffect(() => {
+    const fetchProviders = async () => {
+      try {
+        const response = await fetch(`${hostname}${projectMetadataPath}/providers`);
+        if (response.ok) {
+          const data = await response.json();
+          setProviders(data);
+        }
+      } catch (error) {
+        console.error('Failed to fetch providers:', error);
+      }
+    };
+
+    if (hostname && projectMetadataPath) {
+      fetchProviders();
+    }
+  }, [hostname, projectMetadataPath]);
+
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setFormData((prevFormData) => ({
@@ -39,6 +64,25 @@ export default function LoginPage() {
 
   const handleGuestAccess = () => {
     navigate(`/explorer?${projectRelatedQueryParams}`);
+  };
+
+  const handleProviderLogin = async (providerName: string) => {
+    setIsLoading(true);
+    try {
+      const response = await fetch(`${hostname}${projectMetadataPath}/providers/${providerName}/login`);
+      if (response.ok) {
+        const data = await response.json();
+        login(data.username, data.access_token, data.expiry_time, data.is_admin);
+        navigate(`/explorer?${projectRelatedQueryParams}`);
+      } else {
+        setError(`Failed to login with ${providerName}`);
+      }
+    } catch (error) {
+      console.error(error);
+      setError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -141,6 +185,25 @@ export default function LoginPage() {
             <div className="or-divider">
               <span>or</span>
             </div>
+
+            {providers.map((provider) => (
+              <button
+                key={provider.name}
+                type="button"
+                className="white-button provider-button"
+                onClick={() => handleProviderLogin(provider.name)}
+                disabled={isLoading}
+              >
+                {provider.icon && (
+                  <img 
+                    src={provider.icon} 
+                    alt={provider.label} 
+                    className="provider-icon"
+                  />
+                )}
+                <span>Login with {provider.label}</span>
+              </button>
+            ))}
             
             <button 
               type="button" 
@@ -150,6 +213,7 @@ export default function LoginPage() {
             >
               Explore as Guest
             </button>
+            
           </div>
         </form>
       </div>

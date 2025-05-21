@@ -119,4 +119,34 @@
 
 .edit-project-button:hover {
   background-color: var(--hover);
+}
+
+.provider-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.provider-button:hover {
+  background-color: #f5f5f5;
+}
+
+.provider-button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.provider-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
 } 

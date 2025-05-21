@@ -6,8 +6,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import './UserSettingsPage.css';
 import { getHashParams, getProjectMetadataPath } from '../utils';
 
-interface Token {
-  token_id: string;
+interface ApiKey {
+  token_id: string; // This will change to "id" in the future
   title: string;
   created_at: string;
   expires_at: string;
@@ -17,13 +17,13 @@ export default function UserSettingsPage() {
   const navigate = useNavigate();
   const { isAuthenticated, jwtToken, logout } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [tokens, setTokens] = useState<Token[]>([]);
-  const [newTokenDescription, setNewTokenDescription] = useState('');
-  const [tokenExpires, setTokenExpires] = useState(true);
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [newApiKeyDescription, setNewApiKeyDescription] = useState('');
+  const [apiKeyExpires, setApiKeyExpires] = useState(true);
   const [expiryDays, setExpiryDays] = useState(90);
-  const [newToken, setNewToken] = useState<string | null>(null);
-  const [showTokenModal, setShowTokenModal] = useState(false);
-  const [tokenCopied, setTokenCopied] = useState(false);
+  const [newApiKey, setNewApiKey] = useState<string | null>(null);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [apiKeyCopied, setApiKeyCopied] = useState(false);
   const [passwordData, setPasswordData] = useState({
     current_password: '',
     new_password: '',
@@ -50,14 +50,7 @@ export default function UserSettingsPage() {
   const encodedHostname = encodeURIComponent(hostname);
   const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
 
-  // Fetch user tokens on component mount
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchTokens();
-    }
-  }, [isAuthenticated]);
-
-  const fetchTokens = async () => {
+  const fetchApiKeys = async () => {
     setIsLoading(true);
     try {
       const response = await fetch(`${hostname}${projectMetadataPath}/tokens`, {
@@ -68,26 +61,33 @@ export default function UserSettingsPage() {
 
       if (response.status === 200) {
         const data = await response.json();
-        setTokens(data);
+        setApiKeys(data);
       } else if (response.status === 401) {
         alert('Your session has expired. Please log in again.');
         logout();
         navigate(`/login?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
       } else {
-        setError('Failed to fetch tokens');
+        setError('Failed to fetch API Keys');
       }
     } catch (error) {
-      console.error('Error fetching tokens:', error);
-      setError('An unexpected error occurred while fetching tokens');
+      console.error('Error fetching API Keys:', error);
+      setError('An unexpected error occurred while fetching API Keys');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleCreateToken = async (e: React.FormEvent) => {
+  // Fetch user API Keys on component mount
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchApiKeys();
+    }
+  }, [isAuthenticated]);
+
+  const handleCreateApiKey = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTokenDescription.trim()) {
-      setError('Token description is required');
+    if (!newApiKeyDescription.trim()) {
+      setError('API Key description is required');
       return;
     }
 
@@ -103,49 +103,49 @@ export default function UserSettingsPage() {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({ 
-          title: newTokenDescription,
-          expiry_minutes: tokenExpires ? expiryDays * 24 * 60 : null
+          title: newApiKeyDescription,
+          expiry_minutes: apiKeyExpires ? expiryDays * 24 * 60 : null
         })
       });
 
       if (response.status === 200) {
         const data = await response.json();
-        setNewToken(data.access_token || data.token); // Handle both possible response formats
-        setShowTokenModal(true);
-        setTokenCopied(false);
-        setNewTokenDescription('');
-        fetchTokens(); // Refresh the token list
+        setNewApiKey(data.access_token); // Handle both possible response formats
+        setShowApiKeyModal(true);
+        setApiKeyCopied(false);
+        setNewApiKeyDescription('');
+        fetchApiKeys(); // Refresh the API Key list
       } else {
-        setError('Failed to create token');
+        setError('Failed to create API Key');
       }
     } catch (error) {
-      console.error('Error creating token:', error);
-      setError('An unexpected error occurred while creating the token');
+      console.error('Error creating API Key:', error);
+      setError('An unexpected error occurred while creating the API Key');
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleCopyToken = () => {
-    if (newToken) {
-      navigator.clipboard.writeText(newToken)
+  const handleCopyApiKey = () => {
+    if (newApiKey) {
+      navigator.clipboard.writeText(newApiKey)
         .then(() => {
-          setTokenCopied(true);
+          setApiKeyCopied(true);
         })
         .catch(() => {
-          alert('Failed to copy token to clipboard');
+          alert('Failed to copy API Key to clipboard');
         });
     }
   };
 
-  const closeTokenModal = () => {
-    setShowTokenModal(false);
-    setNewToken(null);
-    setSuccessMessage('Token created successfully');
+  const closeApiKeyModal = () => {
+    setShowApiKeyModal(false);
+    setNewApiKey(null);
+    setSuccessMessage('API Key created successfully');
   };
 
-  const handleDeleteToken = async (tokenId: string) => {
-    if (!confirm('Are you sure you want to delete this token?')) {
+  const handleDeleteApiKey = async (apiKeyId: string) => {
+    if (!confirm('Are you sure you want to delete this API Key?')) {
       return;
     }
 
@@ -154,7 +154,7 @@ export default function UserSettingsPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/tokens/${tokenId}`, {
+      const response = await fetch(`${hostname}${projectMetadataPath}/tokens/${apiKeyId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${jwtToken}`
@@ -162,14 +162,14 @@ export default function UserSettingsPage() {
       });
 
       if (response.status === 200) {
-        fetchTokens(); // Refresh the token list
-        setSuccessMessage('Token deleted successfully');
+        fetchApiKeys(); // Refresh the API Key list
+        setSuccessMessage('API Key deleted successfully');
       } else {
-        setError('Failed to delete token');
+        setError('Failed to delete API Key');
       }
     } catch (error) {
-      console.error('Error deleting token:', error);
-      setError('An unexpected error occurred while deleting the token');
+      console.error('Error deleting API Key:', error);
+      setError('An unexpected error occurred while deleting the API Key');
     } finally {
       setIsLoading(false);
     }
@@ -227,20 +227,28 @@ export default function UserSettingsPage() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
+    // Create date object and explicitly convert to local time
+    const date = new Date(dateString); // Add 'Z' to ensure UTC interpretation
     
     // Check if it's a "never expires" date (year 9999)
     if (date.getFullYear() === 9999) {
       return "Never";
     }
     
-    // Format as MMM dd, yyyy
+    // Format as MMM dd, yyyy at hh:mm AM/PM
     const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const month = months[date.getMonth()];
     const day = date.getDate();
     const year = date.getFullYear();
     
-    return `${month} ${day}, ${year}`;
+    // Convert to 12-hour format with AM/PM
+    let hours = date.getHours();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12;
+    hours = hours ? hours : 12; // the hour '0' should be '12'
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    
+    return `${month} ${day}, ${year} at ${hours}:${minutes} ${ampm}`;
   };
 
   return (
@@ -305,34 +313,34 @@ export default function UserSettingsPage() {
         </div>
 
         <div className="settings-section">
-          <h2><FaKey /> API Tokens</h2>
+          <h2><FaKey /> API Keys</h2>
           
-          <form onSubmit={handleCreateToken} className="create-token-form">
+          <form onSubmit={handleCreateApiKey} className="create-api-key-form">
             <div className="form-group">
-              <label htmlFor="token_description">Token Description</label>
+              <label htmlFor="api_key_description">API Key Description</label>
               <input
                 type="text"
-                id="token_description"
+                id="api_key_description"
                 className="widget padded"
-                value={newTokenDescription}
-                onChange={(e) => setNewTokenDescription(e.target.value)}
+                value={newApiKeyDescription}
+                onChange={(e) => setNewApiKeyDescription(e.target.value)}
                 placeholder="e.g. Development, Testing, etc."
                 required
               />
             </div>
             
             <div className="form-group">
-              <div className="token-expiry-row">
+              <div className="api-key-expiry-row">
                 <label className="checkbox-label">
                   <input
                     type="checkbox"
-                    checked={tokenExpires}
-                    onChange={() => setTokenExpires(!tokenExpires)}
+                    checked={apiKeyExpires}
+                    onChange={() => setApiKeyExpires(!apiKeyExpires)}
                   />
-                  Token expires
+                  API Key Expires in
                 </label>
                 
-                {tokenExpires && (
+                {apiKeyExpires && (
                   <div className="expiry-days-inline">
                     <input
                       type="number"
@@ -349,17 +357,17 @@ export default function UserSettingsPage() {
               </div>
             </div>
             
-            <button type="submit" className="blue-button create-token-button">
-              <FaPlus /> Create Token
+            <button type="submit" className="blue-button create-api-key-button">
+              <FaPlus /> Create API Key
             </button>
           </form>
           
-          <div className="tokens-list">
-            <h3>Your Tokens</h3>
-            {tokens.length === 0 ? (
-              <p>You don't have any tokens yet.</p>
+          <div className="api-keys-list">
+            <h3>Your API Keys</h3>
+            {apiKeys.length === 0 ? (
+              <p>You don't have any API Keys yet.</p>
             ) : (
-              <table className="tokens-table">
+              <table className="api-keys-table">
                 <thead>
                   <tr>
                     <th>Description</th>
@@ -369,21 +377,21 @@ export default function UserSettingsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {tokens.map(token => (
-                    <tr key={token.token_id}>
-                      <td>{token.title}</td>
-                      <td>{formatDate(token.created_at)}</td>
+                  {apiKeys.map(api_key => (
+                    <tr key={api_key.token_id}>
+                      <td>{api_key.title}</td>
+                      <td>{formatDate(api_key.created_at)}</td>
                       <td>
-                        {token.expires_at ? 
-                          formatDate(token.expires_at) : 
+                        {api_key.expires_at ? 
+                          formatDate(api_key.expires_at) : 
                           <span className="never-expires"><FaInfinity /> Never</span>
                         }
                       </td>
                       <td>
                         <button 
                           className="icon-button delete-button" 
-                          onClick={() => handleDeleteToken(token.token_id)}
-                          title="Delete token"
+                          onClick={() => handleDeleteApiKey(api_key.token_id)}
+                          title="Delete API Key"
                         >
                           <FaTrash />
                         </button>
@@ -397,43 +405,43 @@ export default function UserSettingsPage() {
         </div>
       </div>
 
-      {/* Token Modal */}
-      {showTokenModal && newToken && (
-        <div className="modal-background" onClick={closeTokenModal}>
-          <div className="modal-content token-modal" onClick={e => e.stopPropagation()}>
-            <div className="token-modal-header">
+      {/* API Key Modal */}
+      {showApiKeyModal && newApiKey && (
+        <div className="modal-background">
+          <div className="modal-content api-key-modal">
+            <div className="api-key-modal-header">
               <FaExclamationTriangle className="warning-icon" />
-              <h2>Important: Save Your New Token</h2>
+              <h2>Important: Save Your New API Key</h2>
             </div>
             
-            <p className="token-modal-message">
-              This token will only be displayed once. Please copy it now and store it securely.
+            <p className="api-key-modal-message">
+              This API Key will only be displayed once. Please copy it now and store it securely.
             </p>
             
-            <div className="token-display">
-              <code>{newToken}</code>
+            <div className="api-key-display">
+              <code>{newApiKey}</code>
               <button 
                 className="copy-button"
-                onClick={handleCopyToken}
-                title="Copy token to clipboard"
+                onClick={handleCopyApiKey}
+                title="Copy API Key to Clipboard"
               >
                 <FaCopy />
               </button>
             </div>
             
-            {tokenCopied && (
-              <div className="token-copied-message">
-                Token copied to clipboard!
+            {apiKeyCopied && (
+              <div className="api-key-copied-message">
+                API Key copied to clipboard!
               </div>
             )}
             
-            <div className="token-modal-actions">
+            <div className="api-key-modal-actions">
               <button 
                 className="blue-button"
-                onClick={closeTokenModal}
-                disabled={!tokenCopied}
+                onClick={closeApiKeyModal}
+                disabled={!apiKeyCopied}
               >
-                I've saved my token
+                I've saved my API Key
               </button>
             </div>
           </div>

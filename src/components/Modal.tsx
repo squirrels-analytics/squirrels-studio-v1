@@ -12,8 +12,8 @@ const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal-content" onClick={e => e.stopPropagation()}>
+    <div className="modal-overlay" onMouseDown={onClose}>
+      <div className="modal-content" onMouseDown={e => e.stopPropagation()}>
         {title && <div className="modal-header">{title}</div>}
         <div className="modal-body">{children}</div>
         <div className="modal-footer">
