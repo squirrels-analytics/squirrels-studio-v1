@@ -1,16 +1,23 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../Router';
+import { useApp } from '../Router';
 import { FaUserPlus, FaTrash, FaArrowLeft, FaEdit } from 'react-icons/fa';
-import LoadingSpinner from '../components/LoadingSpinner';
 import { User, UserField } from '../types/UserManagement';
 import './UserManagementPage.css';
-import { getHashParams, getProjectRelatedQueryParams, getProjectMetadataPath } from '../utils';
+
 
 export default function UserManagementPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, jwtToken, logout } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { 
+    userProps, 
+    showModal, 
+    showConfirm,
+    setIsLoading,
+    hostname, 
+    projectMetadataPath, 
+    projectRelatedQueryParams 
+  } = useApp();
+  const { username: isAuthenticated } = userProps;
   const [users, setUsers] = useState<User[]>([]);
   const [userFields, setUserFields] = useState<UserField[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -23,14 +30,6 @@ export default function UserManagementPage() {
     is_admin: false
   });
   const [editUserData, setEditUserData] = useState<Record<string, any>>({});
-
-  const searchParams = getHashParams();
-  const hostname = searchParams.get('host');
-  const projectName = searchParams.get('projectName');
-  const projectVersion = searchParams.get('projectVersion');
-
-  const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
-  const projectRelatedQueryParams = getProjectRelatedQueryParams(hostname, projectName, projectVersion);
 
   useEffect(() => {
     if (!hostname || !projectMetadataPath) {
@@ -47,18 +46,14 @@ export default function UserManagementPage() {
     setIsLoading(true);
     try {
       const response = await fetch(`${hostname}${projectMetadataPath}/users`, {
-        headers: {
-          'Authorization': `Bearer ${jwtToken}`
-        }
+        credentials: 'include'
       });
 
       if (response.status === 200) {
         const data = await response.json();
         setUsers(data);
       } else if (response.status === 401) {
-        alert('Your session has expired. Please log in again.');
-        logout();
-        navigate(`/login?${projectRelatedQueryParams}`);
+        showModal('Your session has expired. Please log in again.', 'Session Expired', true);
       } else {
         setError('Failed to fetch users');
       }
@@ -73,9 +68,7 @@ export default function UserManagementPage() {
   const fetchUserFields = async () => {
     try {
       const response = await fetch(`${hostname}${projectMetadataPath}/user-fields`, {
-        headers: {
-          'Authorization': `Bearer ${jwtToken}`
-        }
+        credentials: 'include'
       });
 
       if (response.status === 200) {
@@ -109,9 +102,9 @@ export default function UserManagementPage() {
       const response = await fetch(`${hostname}${projectMetadataPath}/users`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${jwtToken}`,
           'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify(newUserData)
       });
 
@@ -144,35 +137,39 @@ export default function UserManagementPage() {
   };
 
   const handleDeleteUser = async (username: string) => {
-    if (!confirm(`Are you sure you want to delete user "${username}"?`)) {
-      return;
-    }
+    const performDelete = async () => {
+      setIsLoading(true);
+      setError('');
+      setSuccessMessage('');
 
-    setIsLoading(true);
-    setError('');
-    setSuccessMessage('');
+      try {
+        const response = await fetch(`${hostname}${projectMetadataPath}/users/${username}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
 
-    try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/users/${username}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${jwtToken}`
+        if (response.status === 200) {
+          setSuccessMessage('User deleted successfully');
+          fetchUsers();
+        } else {
+          const data = await response.json();
+          setError(data.message || 'Failed to delete user');
         }
-      });
-
-      if (response.status === 200) {
-        setSuccessMessage('User deleted successfully');
-        fetchUsers();
-      } else {
-        const data = await response.json();
-        setError(data.message || 'Failed to delete user');
+      } catch (error) {
+        console.error('Error deleting user:', error);
+        setError('An unexpected error occurred while deleting the user');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error deleting user:', error);
-      setError('An unexpected error occurred while deleting the user');
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    showConfirm(
+      `Are you sure you want to delete user "${username}"? This action cannot be undone.`,
+      performDelete,
+      'Delete User',
+      'Delete',
+      'red-button'
+    );
   };
 
   const handleInputChange = (name: string, value: any, switchOffNull: boolean = false) => {
@@ -226,9 +223,9 @@ export default function UserManagementPage() {
       const response = await fetch(`${hostname}${projectMetadataPath}/users/${editUserData.username}`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${jwtToken}`,
           'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify(editUserData)
       });
 
@@ -557,8 +554,6 @@ export default function UserManagementPage() {
           </div>
         </div>
       )}
-
-      <LoadingSpinner isLoading={isLoading} />
     </div>
   );
 } 

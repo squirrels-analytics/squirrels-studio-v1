@@ -1,19 +1,20 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../Router';
 import LoadingSpinner from '../components/LoadingSpinner';
 import './LoginPage.css';
 import { getHashParams, getProjectMetadataPath, getProjectRelatedQueryParams } from '../utils';
+import { useApp } from '../Router';
 
 interface Provider {
   name: string;
   label: string;
   icon: string;
+  login_url: string;
 }
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { login } = useAuth();
+  const { logout } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -29,6 +30,12 @@ export default function LoginPage() {
 
   const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
   const projectRelatedQueryParams = getProjectRelatedQueryParams(hostname, projectName, projectVersion);
+  const targetRedirectPath = searchParams.get('redirectPath') || `/explorer?${projectRelatedQueryParams}`;
+  const redirectUrl = `${window.location.origin}/squirrels-studio/#${targetRedirectPath}`;
+
+  useEffect(() => {
+    logout();
+  }, [logout]);
 
   useEffect(() => {
     if (!hostname || !projectMetadataPath) {
@@ -66,54 +73,36 @@ export default function LoginPage() {
     navigate(`/explorer?${projectRelatedQueryParams}`);
   };
 
-  const handleProviderLogin = async (providerName: string, providerLabel: string) => {
-    setIsLoading(true);
-    try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/providers/${providerName}/login`);
-      if (response.ok) {
-        const data = await response.json();
-        // Redirect to the OAuth provider's login page
-        window.location.href = data.auth_url;
-      } else {
-        setError(`Failed to login with ${providerLabel}`);
-      }
-    } catch (error) {
-      console.error(error);
-      setError('An unexpected error occurred');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setIsLoading(true);
     setError('');
 
     try {
-      // Now submit the login request
       const loginData = new FormData();
       loginData.append('username', formData.username);
       loginData.append('password', formData.password);
       
+      // Construct the login path
       const loginPath = `${projectMetadataPath}/login`;
+      
       const response = await fetch(hostname + loginPath, {
         method: 'POST',
-        body: loginData
+        body: loginData,
+        credentials: 'include',
       });
 
       if (response.status === 200) {
-        const data = await response.json();
-        login(data.username, data.access_token, data.expiry_time, data.is_admin);
-        navigate(`/explorer?${projectRelatedQueryParams}`);
+        // Navigate to target URL
+        navigate(targetRedirectPath);
       } else if (response.status === 401) {
         setError('Invalid username or password');
       } else {
-        setError(`Unexpected response status: ${response.status}`);
+        setError(`Login failed with an unexpected server response: ${response.status}`);
       }
     } catch (error) {
-      console.error(error);
-      setError('An unexpected error occurred');
+      console.error("Login request failed:", error);
+      setError('An unexpected error occurred during login.');
     } finally {
       setIsLoading(false);
     }
@@ -181,41 +170,42 @@ export default function LoginPage() {
             <button type="submit" className="blue-button login-button" disabled={isLoading}>
               Login
             </button>
-            
-            <div className="or-divider">
-              <span>or</span>
-            </div>
-
-            {providers.map((provider) => (
-              <button
-                key={provider.name}
-                type="button"
-                className="white-button provider-button"
-                onClick={() => handleProviderLogin(provider.name, provider.label)}
-                disabled={isLoading}
-              >
-                {provider.icon && (
-                  <img 
-                    src={provider.icon} 
-                    alt={provider.label} 
-                    className="provider-icon"
-                  />
-                )}
-                <span>Login with {provider.label}</span>
-              </button>
-            ))}
-            
-            <button 
-              type="button" 
-              className="white-button guest-button" 
-              onClick={handleGuestAccess}
-              disabled={isLoading}
-            >
-              Explore as Guest
-            </button>
-            
           </div>
         </form>
+            
+        <div className="or-divider">
+          <span>or</span>
+        </div>
+        
+        {providers.map((provider) => (
+          <form key={provider.name} method="get" action={provider.login_url}>
+            <input type="hidden" name="redirect_url" value={redirectUrl} /> 
+            <button
+              key={provider.name}
+              type="submit"
+              className="white-button provider-button"
+              disabled={isLoading}
+            >
+              {provider.icon && (
+                <img 
+                  src={provider.icon} 
+                  alt={provider.label} 
+                  className="provider-icon"
+                />
+              )}
+              <span>Login with {provider.label}</span>
+            </button>
+          </form>
+        ))}
+
+        <button 
+          type="button" 
+          className="white-button guest-button" 
+          onClick={handleGuestAccess}
+          disabled={isLoading}
+        >
+          Explore as Guest
+        </button>
       </div>
       
       <LoadingSpinner isLoading={isLoading} />

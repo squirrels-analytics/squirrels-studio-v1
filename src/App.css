@@ -96,6 +96,18 @@ button {
   transform: translateY(-1px);
 }
 
+.red-button {
+  background-color: #dc3545;
+  color: white;
+  box-shadow: var(--shadow-sm);
+}
+
+.red-button:hover {
+  background-color: #c82333;
+  box-shadow: var(--shadow-md);
+  transform: translateY(-1px);
+}
+
 .horizontal-container {
   display: flex;
   gap: 0.5rem;

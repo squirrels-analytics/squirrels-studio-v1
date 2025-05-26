@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../Router';
+import { useApp } from '../Router';
 import { FaKey, FaLock, FaTrash, FaPlus, FaInfinity, FaCopy, FaExclamationTriangle } from 'react-icons/fa';
-import LoadingSpinner from '../components/LoadingSpinner';
 import './UserSettingsPage.css';
-import { getHashParams, getProjectMetadataPath } from '../utils';
+
 
 interface ApiKey {
-  token_id: string; // This will change to "id" in the future
+  id: string;
   title: string;
   created_at: string;
   expires_at: string;
@@ -15,8 +14,19 @@ interface ApiKey {
 
 export default function UserSettingsPage() {
   const navigate = useNavigate();
-  const { isAuthenticated, jwtToken, logout } = useAuth();
-  const [isLoading, setIsLoading] = useState(false);
+  const { 
+    userProps, 
+    showModal, 
+    showConfirm,
+    setIsLoading,
+    hostname, 
+    projectName, 
+    projectVersion, 
+    projectMetadataPath, 
+    projectRelatedQueryParams 
+  } = useApp();
+  const { username: isAuthenticated } = userProps;
+
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [newApiKeyDescription, setNewApiKeyDescription] = useState('');
   const [apiKeyExpires, setApiKeyExpires] = useState(true);
@@ -32,11 +42,6 @@ export default function UserSettingsPage() {
   const [error, setError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
 
-  const searchParams = getHashParams();
-  const hostname = searchParams.get('host');
-  const projectName = searchParams.get('projectName');
-  const projectVersion = searchParams.get('projectVersion');
-
   // Add useEffect for navigation
   useEffect(() => {
     if (!hostname || !projectName || !projectVersion) {
@@ -47,25 +52,19 @@ export default function UserSettingsPage() {
   if (!hostname || !projectName || !projectVersion) {
     return null;
   }
-  const encodedHostname = encodeURIComponent(hostname);
-  const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
 
   const fetchApiKeys = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/tokens`, {
-        headers: {
-          'Authorization': `Bearer ${jwtToken}`
-        }
+      const response = await fetch(`${hostname}${projectMetadataPath}/api-key`, {
+        credentials: 'include'
       });
 
       if (response.status === 200) {
         const data = await response.json();
         setApiKeys(data);
       } else if (response.status === 401) {
-        alert('Your session has expired. Please log in again.');
-        logout();
-        navigate(`/login?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`);
+        showModal('Your session has expired. Please log in again.', 'Session Expired', true);
       } else {
         setError('Failed to fetch API Keys');
       }
@@ -96,12 +95,12 @@ export default function UserSettingsPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/tokens`, {
+      const response = await fetch(`${hostname}${projectMetadataPath}/api-key`, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${jwtToken}`,
           'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({ 
           title: newApiKeyDescription,
           expiry_minutes: apiKeyExpires ? expiryDays * 24 * 60 : null
@@ -110,7 +109,7 @@ export default function UserSettingsPage() {
 
       if (response.status === 200) {
         const data = await response.json();
-        setNewApiKey(data.access_token); // Handle both possible response formats
+        setNewApiKey(data.api_key); // Handle both possible response formats
         setShowApiKeyModal(true);
         setApiKeyCopied(false);
         setNewApiKeyDescription('');
@@ -133,7 +132,7 @@ export default function UserSettingsPage() {
           setApiKeyCopied(true);
         })
         .catch(() => {
-          alert('Failed to copy API Key to clipboard');
+          showModal('Failed to copy API Key to clipboard', 'Error');
         });
     }
   };
@@ -145,34 +144,38 @@ export default function UserSettingsPage() {
   };
 
   const handleDeleteApiKey = async (apiKeyId: string) => {
-    if (!confirm('Are you sure you want to delete this API Key?')) {
-      return;
-    }
+    const performDelete = async () => {
+      setIsLoading(true);
+      setError('');
+      setSuccessMessage('');
 
-    setIsLoading(true);
-    setError('');
-    setSuccessMessage('');
+      try {
+        const response = await fetch(`${hostname}${projectMetadataPath}/api-key/${apiKeyId}`, {
+          method: 'DELETE',
+          credentials: 'include'
+        });
 
-    try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/tokens/${apiKeyId}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${jwtToken}`
+        if (response.status === 200) {
+          fetchApiKeys(); // Refresh the API Key list
+          setSuccessMessage('API Key deleted successfully');
+        } else {
+          setError('Failed to delete API Key');
         }
-      });
-
-      if (response.status === 200) {
-        fetchApiKeys(); // Refresh the API Key list
-        setSuccessMessage('API Key deleted successfully');
-      } else {
-        setError('Failed to delete API Key');
+      } catch (error) {
+        console.error('Error deleting API Key:', error);
+        setError('An unexpected error occurred while deleting the API Key');
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error) {
-      console.error('Error deleting API Key:', error);
-      setError('An unexpected error occurred while deleting the API Key');
-    } finally {
-      setIsLoading(false);
-    }
+    };
+
+    showConfirm(
+      'Are you sure you want to delete this API Key? This action cannot be undone.',
+      performDelete,
+      'Delete API Key',
+      'Delete',
+      'red-button'
+    );
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -191,9 +194,9 @@ export default function UserSettingsPage() {
       const response = await fetch(`${hostname}${projectMetadataPath}/change-password`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${jwtToken}`,
           'Content-Type': 'application/json'
         },
+        credentials: 'include',
         body: JSON.stringify({
           old_password: passwordData.current_password,
           new_password: passwordData.new_password
@@ -256,7 +259,7 @@ export default function UserSettingsPage() {
       <div className="settings-header">
         <h1>User Settings</h1>
         <div className="header-actions">
-          <button className="white-button" onClick={() => navigate(`/explorer?host=${encodedHostname}&projectName=${projectName}&projectVersion=${projectVersion}`)}>
+          <button className="white-button" onClick={() => navigate(`/explorer?${projectRelatedQueryParams}`)}>
             Back to Explorer
           </button>
         </div>
@@ -378,7 +381,7 @@ export default function UserSettingsPage() {
                 </thead>
                 <tbody>
                   {apiKeys.map(api_key => (
-                    <tr key={api_key.token_id}>
+                    <tr key={api_key.id}>
                       <td>{api_key.title}</td>
                       <td>{formatDate(api_key.created_at)}</td>
                       <td>
@@ -390,7 +393,7 @@ export default function UserSettingsPage() {
                       <td>
                         <button 
                           className="icon-button delete-button" 
-                          onClick={() => handleDeleteApiKey(api_key.token_id)}
+                          onClick={() => handleDeleteApiKey(api_key.id)}
                           title="Delete API Key"
                         >
                           <FaTrash />
@@ -447,8 +450,6 @@ export default function UserSettingsPage() {
           </div>
         </div>
       )}
-
-      <LoadingSpinner isLoading={isLoading} />
     </div>
   );
 } 

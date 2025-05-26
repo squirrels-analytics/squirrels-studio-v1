@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../Router';
+import { useApp } from '../Router';
 import { FaCopy, FaBars } from 'react-icons/fa';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
@@ -11,17 +11,14 @@ import { Prec } from '@codemirror/state';
 import { ParamDataType, ParameterType } from '../types/ParametersResponse.js';
 import { TableDataType } from '../types/DatasetResponse.js';
 import { OutputFormatEnum, ModelType, LineageType, DataTypeType, ConnectionType } from '../types/DataCatalogResponse.js';
-
-import LoadingSpinner from '../components/LoadingSpinner.js';
 import Settings from '../components/Settings.js'
 import ResultTable from '../components/ResultTable.js';
 import { ParametersContainer } from '../components/ParameterWidgets.js';
 import './ExplorerPage.css';
-import { getHashParams, getProjectMetadataPath, getProjectRelatedQueryParams, validateSquirrelsVersion } from '../utils';
+import { validateSquirrelsVersion } from '../utils';
 import ModelExplorer from '../components/ModelExplorer';
 import LineageGraph from '../components/LineageGraph';
 import { ProjectMetadataType } from '../types/ProjectMetadataResponse.js';
-import Modal from '../components/Modal';
 
 interface ConfigureOptions {
   limit: number;
@@ -59,36 +56,33 @@ async function copyTableData(tableData: TableDataType): Promise<string | null> {
 }
 
 async function callAPI(
-    url: string, jwtToken: string, username: string, callback: (x: Response) => Promise<void>, 
-    setIsLoading: (x: boolean) => void, logout: () => void, showModal: (message: string, title?: string) => void
+    url: string, username: string, callback: (x: Response) => Promise<void>, 
+    setIsLoading: (x: boolean) => void, showModal: (message: string, title: string, logout: boolean) => void
 ) {
     setIsLoading(true);
 
     try {
-        const authorization = jwtToken ? `Bearer ${jwtToken}` : "";
         const response = await fetch(url, {
-            headers: {
-                'Authorization': authorization
-            }
+            credentials: 'include'
         });
 
-        const appliedUsername = jwtToken ? response.headers.get("Applied-Username") : null;
+        const appliedUsername = response.headers.get("Applied-Username");
+        console.log(username, appliedUsername) // TODO: remove
 
         // appliedUsername is null for APIs that aren't impacted by auth, or under certain 400/500 error statuses
         if (appliedUsername && username && appliedUsername !== username) {
-            showModal("User session was invalidated by the server... Logging out.", "Authentication Error");
-            logout();
+            showModal("User session was invalidated by the server... Logging out.", "Authentication Error", true);
         }
         if (response.status === 200) {
             await callback(response);
         }
         else if (response.status === 401) {
-            showModal("This resource requires authentication", "Authentication Error");
+            showModal("This resource requires authentication", "Authentication Error", false);
         }
         else {
             const data = await response.json();
             console.error(data.message || "An error occurred");
-            showModal(data.message || "An unexpected server error occurred", "Error");
+            showModal(data.message || "An unexpected server error occurred", "Error", false);
         }
     }
     catch(error) {
@@ -99,36 +93,69 @@ async function callAPI(
 }
 
 async function callJsonAPI(
-    url: string, jwtToken: string, username: string, callback: (x: any) => Promise<void>, 
-    setIsLoading: (x: boolean) => void, logout: () => void, showModal: (message: string, title?: string) => void
+    url: string, username: string, callback: (x: any) => Promise<void>, 
+    setIsLoading: (x: boolean) => void, showModal: (message: string, title: string, logout: boolean) => void
 ) {
     const newCallback = async (x: Response) => {
         const data = await x.json();
         await callback(data);
     };
-    await callAPI(url, jwtToken, username, newCallback, setIsLoading, logout, showModal);
+    await callAPI(url, username, newCallback, setIsLoading, showModal);
 }
 
 export default function ExplorerPage() {
     const navigate = useNavigate();
-    const { isAuthenticated, jwtToken, username, login, logout, isAdmin } = useAuth();
+        const { 
+        userProps, 
+        setUserProps, 
+        showModal,
+        setIsLoading,
+        hostname, 
+        projectVersion, 
+        projectMetadataPath, 
+        projectRelatedQueryParams 
+    } = useApp();
+    const { username, isAdmin } = userProps;
     
-    const searchParams = getHashParams();
-    const hostname = searchParams.get('host');
-    const projectName = searchParams.get('projectName');
-    const projectVersion = searchParams.get('projectVersion');
-
-    const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
-    const projectRelatedQueryParams = getProjectRelatedQueryParams(hostname, projectName, projectVersion);
-    
+    // Fetch user properties on mount
     useEffect(() => {
         if (!hostname || !projectMetadataPath) {
           navigate('/');
+          return;
         }
-      }, [hostname, projectMetadataPath, navigate]);
-    
-    const [isLoading, setIsLoading] = useState(false);
 
+        const fetchUserProps = async () => {
+          try {
+            const response = await fetch(`${hostname}${projectMetadataPath}/userinfo`, {
+              credentials: 'include'
+            });
+            
+            if (response.status === 200) {
+              const data = await response.json();
+              setUserProps({
+                username: data.username,
+                isAdmin: data.is_admin
+              });
+            } else if (response.status === 401) {
+              // Not authenticated, clear user props
+              setUserProps({
+                username: '',
+                isAdmin: false
+              });
+            }
+          } catch (error) {
+            console.error('Error fetching user properties:', error);
+            // On error, clear user props
+            setUserProps({
+              username: '',
+              isAdmin: false
+            });
+          }
+        };
+
+        fetchUserProps();
+    }, [hostname, projectMetadataPath, navigate, setUserProps]);
+    
     const parametersURL = useRef("");
     const resultsURL = useRef("");
 
@@ -158,34 +185,15 @@ export default function ExplorerPage() {
 
     const [explorerWidth, setExplorerWidth] = useState(320);
 
-    const [modalConfig, setModalConfig] = useState<{
-        isOpen: boolean; message: string; title?: string;
-    }>({
-        isOpen: false, message: '', title: undefined
-    });
-
-    const showModal = (message: string, title?: string) => {
-        setModalConfig({ isOpen: true, message, title });
-    };
-
-    const closeModal = () => {
-        setModalConfig({ isOpen: false, message: '', title: undefined });
-    };
-
-    const handleLogout = () => {
-        logout();
-        navigate(`/login?${projectRelatedQueryParams}`);
-    };
-
     const fetchJson = useCallback(async (urlPath: string, callback: (x: any) => Promise<void>) => {
         if (!urlPath) return;
-        await callJsonAPI(hostname + urlPath, jwtToken, username, callback, setIsLoading, handleLogout, showModal);
-    }, [jwtToken, username]);
+        await callJsonAPI(hostname + urlPath, username, callback, setIsLoading, showModal);
+    }, [username]);
 
     const fetchHTTPResponse = useCallback(async (urlPath: string, callback: (x: Response) => Promise<void>) => {
         if (!urlPath) return;
-        await callAPI(hostname + urlPath, jwtToken, username, callback, setIsLoading, handleLogout, showModal);
-    }, [jwtToken, username]);
+        await callAPI(hostname + urlPath, username, callback, setIsLoading, showModal);
+    }, [username]);
 
     useEffect(() => {
         if (!projectMetadataPath) return;
@@ -368,7 +376,7 @@ export default function ExplorerPage() {
                     <ul className="menu-list">
                         <li className="menu-section">
                             <div className="menu-section-header">Navigation</div>
-                            {isAuthenticated && (
+                            {username && (
                                 <div 
                                     className="menu-item"
                                     onClick={() => {
@@ -379,7 +387,7 @@ export default function ExplorerPage() {
                                     User Settings
                                 </div>
                             )}
-                            {isAuthenticated && isAdmin && (
+                            {username && isAdmin && (
                                 <div 
                                     className="menu-item"
                                     onClick={() => {
@@ -393,11 +401,11 @@ export default function ExplorerPage() {
                             <div 
                                 className="menu-item"
                                 onClick={() => {
-                                    handleLogout();
+                                    navigate(`/login?${projectRelatedQueryParams}`);
                                     setShowMenu(false);
                                 }}
                             >
-                                {isAuthenticated ? 'Logout' : 'Login'}
+                                {username ? 'Logout' : 'Login'}
                             </div>
                         </li>
                         {outputFormat === OutputFormatEnum.TABLE && (
@@ -469,29 +477,6 @@ export default function ExplorerPage() {
 
     const paramSelections = useRef(new Map<string, string[]>());
     
-    // Listen for cross-tab authentication messages
-    useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            if (event.data.type === 'SQUIRRELS_TOKEN_DATA') {
-                const { jwtToken, username, expiryTime, isAdmin } = event.data.data;
-                
-                // Update login state through the auth context
-                login(username, jwtToken, expiryTime, isAdmin);
-
-                // Refresh the page to ensure all components reflect the new auth state
-                window.location.href = `${window.location.pathname}#/explorer?${projectRelatedQueryParams}`;
-                window.location.reload();
-            }
-        };
-
-        window.addEventListener('message', handleMessage);
-        
-        // Clean up the event listener when component unmounts
-        return () => {
-            window.removeEventListener('message', handleMessage);
-        };
-    }, [login]);
-
     const handleResizeMouseDown = (e: React.MouseEvent) => {
         isResizing.current = true;
         resizeStartPosition.current = e.clientY;
@@ -612,7 +597,7 @@ export default function ExplorerPage() {
                     <span style={{margin: "0 0.5rem"}}><b>Project Name:</b> {projectMetadata?.label || ''} ({projectVersion})</span>
                     <div className="horizontal-container">
                         <div className="auth-container">
-                            {!isAuthenticated ? (
+                            {!username ? (
                                 <span>Exploring as Guest</span>
                             ) : (
                                 <span>Logged in as "{username}"</span>
@@ -712,15 +697,6 @@ export default function ExplorerPage() {
                     )}
                 </div>
             </div>
-
-            <LoadingSpinner isLoading={isLoading} />
-            <Modal
-                isOpen={modalConfig.isOpen}
-                onClose={closeModal}
-                title={modalConfig.title}
-            >
-                {modalConfig.message}
-            </Modal>
         </>
     );
 } 

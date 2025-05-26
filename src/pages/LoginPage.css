@@ -44,7 +44,7 @@
   width: 100%;
 }
 
-.login-button, .guest-button {
+.login-button {
   width: 100%;
   padding: 0.75rem;
   margin-top: 0.5rem;
@@ -121,14 +121,14 @@
   background-color: var(--hover);
 }
 
-.provider-button {
+.provider-button, .guest-button {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
   width: 100%;
   padding: 10px;
-  margin: 8px 0;
+  margin-top: 12px;
   border: 1px solid #ddd;
   border-radius: 4px;
   background-color: white;

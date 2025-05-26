@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../Router';
-import { getProjectRelatedQueryParams } from '../utils';
+import { useApp } from '../Router';
+import { getProjectMetadataPath } from '../utils';
 
 interface SessionTimeoutHandlerProps {
   hostname: string;
@@ -14,33 +13,45 @@ export default function SessionTimeoutHandler({
   projectName, 
   projectVersion 
 }: SessionTimeoutHandlerProps) {
-  const navigate = useNavigate();
-  const { isAuthenticated, expiryTime, logout } = useAuth();
-  const userTimeoutId = useRef<number>(0);
-  const projectRelatedQueryParams = getProjectRelatedQueryParams(hostname, projectName, projectVersion);
+  const { userProps, showModal } = useApp();
+  const { username: isAuthenticated } = userProps;
+  const pollingIntervalId = useRef<number>(0);
+  const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
 
   const handleLogout = () => {
-    clearTimeout(userTimeoutId.current);
-    logout();
-    navigate(`/login?${projectRelatedQueryParams}`);
-    alert("User session expired");
+    clearInterval(pollingIntervalId.current);
+    showModal("User session expired", "Session Expired", true);
   };
 
-  // Set up token expiry timeout
+  // Set up polling to check authentication status
   useEffect(() => {
-    if (isAuthenticated && expiryTime) {
-      const timeDiff = new Date(expiryTime).getTime() - new Date().getTime();
-      if (timeDiff > 0) {
-        userTimeoutId.current = window.setTimeout(() => {
-          handleLogout();
-        }, timeDiff);
-      }
-    }
+    if (isAuthenticated) {
+      // Check authentication status every 5 minutes
+      // This is to detect if the session cookie has expired
+      const checkAuthStatus = async () => {
+        try {
+          // Use the /userinfo endpoint to check if the user is still authenticated
+          const response = await fetch(`${hostname}${projectMetadataPath}/userinfo`, {
+            credentials: 'include'
+          });
+          
+          if (response.status === 401) {
+            // If 401 Unauthorized, the session has expired
+            handleLogout();
+          }
+        } catch (error) {
+          console.error("Error checking authentication status:", error);
+        }
+      };
 
-    return () => {
-      clearTimeout(userTimeoutId.current);
-    };
-  }, [expiryTime, isAuthenticated]);
+      // Start polling interval
+      pollingIntervalId.current = window.setInterval(checkAuthStatus, 5 * 60 * 1000); // 5 minutes
+
+      return () => {
+        clearInterval(pollingIntervalId.current);
+      };
+    }
+  }, [isAuthenticated, hostname, projectMetadataPath]);
 
   return null; // This component doesn't render anything
 } 
