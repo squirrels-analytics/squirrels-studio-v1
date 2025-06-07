@@ -45,7 +45,7 @@ export default function UserManagementPage() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/users`, {
+      const response = await fetch(`${hostname}/api/auth/user-management/users`, {
         credentials: 'include'
       });
 
@@ -67,7 +67,7 @@ export default function UserManagementPage() {
 
   const fetchUserFields = async () => {
     try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/user-fields`, {
+      const response = await fetch(`${hostname}/api/auth/user-management/user-fields`, {
         credentials: 'include'
       });
 
@@ -99,7 +99,7 @@ export default function UserManagementPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/users`, {
+      const response = await fetch(`${hostname}/api/auth/user-management/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -143,17 +143,16 @@ export default function UserManagementPage() {
       setSuccessMessage('');
 
       try {
-        const response = await fetch(`${hostname}${projectMetadataPath}/users/${username}`, {
+        const response = await fetch(`${hostname}/api/auth/user-management/users/${username}`, {
           method: 'DELETE',
           credentials: 'include'
         });
 
-        if (response.status === 200) {
+        if (response.status === 204) {
           setSuccessMessage('User deleted successfully');
           fetchUsers();
         } else {
-          const data = await response.json();
-          setError(data.message || 'Failed to delete user');
+          setError('Failed to delete user');
         }
       } catch (error) {
         console.error('Error deleting user:', error);
@@ -220,7 +219,7 @@ export default function UserManagementPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/users/${editUserData.username}`, {
+      const response = await fetch(`${hostname}/api/auth/user-management/users/${editUserData.username}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

@@ -102,16 +102,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Loading state
   const [isLoading, setIsLoading] = useState(false);
   
-  // API URL for auth operations
-  const apiUrl = useMemo(() => {
-    return (hostname && projectMetadataPath) ? `${hostname}${projectMetadataPath}` : null;
-  }, [hostname, projectMetadataPath]);
-
   // Auth functions
   const logout = useCallback(() => {
     // Attempt to call the logout endpoint, but don't wait for it
-    if (apiUrl) {
-      fetch(`${apiUrl}/logout`, {
+    if (hostname) {
+      fetch(`${hostname}/api/auth/logout`, {
         method: 'GET',
         credentials: 'include'
       }).catch(() => {
@@ -122,7 +117,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       username: '',
       isAdmin: false
     });
-  }, [apiUrl]);
+  }, [hostname]);
 
   // Modal functions
   const showModal = useCallback((message: string, title: string, logout?: boolean) => {
@@ -260,8 +255,6 @@ function AppLayout() {
     <>
       <SessionTimeoutHandler 
         hostname={hostname}
-        projectName={projectName}
-        projectVersion={projectVersion}
       />
       <Outlet />
     </>

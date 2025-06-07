@@ -21,8 +21,7 @@ export default function UserSettingsPage() {
     setIsLoading,
     hostname, 
     projectName, 
-    projectVersion, 
-    projectMetadataPath, 
+    projectVersion,
     projectRelatedQueryParams 
   } = useApp();
   const { username: isAuthenticated } = userProps;
@@ -56,7 +55,7 @@ export default function UserSettingsPage() {
   const fetchApiKeys = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/api-key`, {
+      const response = await fetch(`${hostname}/api/auth/api-key`, {
         credentials: 'include'
       });
 
@@ -95,7 +94,7 @@ export default function UserSettingsPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/api-key`, {
+      const response = await fetch(`${hostname}/api/auth/api-key`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -150,14 +149,14 @@ export default function UserSettingsPage() {
       setSuccessMessage('');
 
       try {
-        const response = await fetch(`${hostname}${projectMetadataPath}/api-key/${apiKeyId}`, {
+        const response = await fetch(`${hostname}/api/auth/api-key/${apiKeyId}`, {
           method: 'DELETE',
           credentials: 'include'
         });
 
-        if (response.status === 200) {
-          fetchApiKeys(); // Refresh the API Key list
+        if (response.status === 204) {
           setSuccessMessage('API Key deleted successfully');
+          fetchApiKeys(); // Refresh the API Key list
         } else {
           setError('Failed to delete API Key');
         }
@@ -191,7 +190,7 @@ export default function UserSettingsPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${projectMetadataPath}/change-password`, {
+      const response = await fetch(`${hostname}/api/auth/change-password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

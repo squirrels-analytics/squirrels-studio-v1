@@ -46,7 +46,7 @@ export default function LoginPage() {
   useEffect(() => {
     const fetchProviders = async () => {
       try {
-        const response = await fetch(`${hostname}${projectMetadataPath}/providers`);
+        const response = await fetch(`${hostname}/api/auth/providers`);
         if (response.ok) {
           const data = await response.json();
           setProviders(data);
@@ -56,10 +56,10 @@ export default function LoginPage() {
       }
     };
 
-    if (hostname && projectMetadataPath) {
+    if (hostname) {
       fetchProviders();
     }
-  }, [hostname, projectMetadataPath]);
+  }, [hostname]);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -84,7 +84,7 @@ export default function LoginPage() {
       loginData.append('password', formData.password);
       
       // Construct the login path
-      const loginPath = `${projectMetadataPath}/login`;
+      const loginPath = `/api/auth/login`;
       
       const response = await fetch(hostname + loginPath, {
         method: 'POST',

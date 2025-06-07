@@ -67,7 +67,6 @@ async function callAPI(
         });
 
         const appliedUsername = response.headers.get("Applied-Username");
-        console.log(username, appliedUsername) // TODO: remove
 
         // appliedUsername is null for APIs that aren't impacted by auth, or under certain 400/500 error statuses
         if (appliedUsername && username && appliedUsername !== username) {
@@ -126,7 +125,7 @@ export default function ExplorerPage() {
 
         const fetchUserProps = async () => {
           try {
-            const response = await fetch(`${hostname}${projectMetadataPath}/userinfo`, {
+            const response = await fetch(`${hostname}/api/auth/userinfo`, {
               credentials: 'include'
             });
             

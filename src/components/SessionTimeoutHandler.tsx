@@ -1,22 +1,16 @@
 import { useEffect, useRef } from 'react';
 import { useApp } from '../Router';
-import { getProjectMetadataPath } from '../utils';
 
 interface SessionTimeoutHandlerProps {
   hostname: string;
-  projectName: string;
-  projectVersion: string;
 }
 
 export default function SessionTimeoutHandler({ 
-  hostname, 
-  projectName, 
-  projectVersion 
+  hostname
 }: SessionTimeoutHandlerProps) {
   const { userProps, showModal } = useApp();
   const { username: isAuthenticated } = userProps;
   const pollingIntervalId = useRef<number>(0);
-  const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
 
   const handleLogout = () => {
     clearInterval(pollingIntervalId.current);
@@ -31,7 +25,7 @@ export default function SessionTimeoutHandler({
       const checkAuthStatus = async () => {
         try {
           // Use the /userinfo endpoint to check if the user is still authenticated
-          const response = await fetch(`${hostname}${projectMetadataPath}/userinfo`, {
+          const response = await fetch(`${hostname}/api/auth/userinfo`, {
             credentials: 'include'
           });
           
@@ -51,7 +45,7 @@ export default function SessionTimeoutHandler({
         clearInterval(pollingIntervalId.current);
       };
     }
-  }, [isAuthenticated, hostname, projectMetadataPath]);
+  }, [isAuthenticated, hostname]);
 
   return null; // This component doesn't render anything
 } 
