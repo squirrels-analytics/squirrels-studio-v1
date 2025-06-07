@@ -18,8 +18,6 @@ export default function RootPage() {
   // Clear any existing authentication data when the root page loads
   useEffect(() => {
     sessionStorage.removeItem('username');
-    sessionStorage.removeItem('jwtToken');
-    sessionStorage.removeItem('expiryTime');
     sessionStorage.removeItem('isAdmin');
   }, []);
 

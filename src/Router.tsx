@@ -1,109 +1,229 @@
 import { createHashRouter, RouterProvider, Outlet, useNavigate } from 'react-router-dom';
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useMemo, useState, useCallback } from 'react';
 import LoginPage from './pages/LoginPage';
 import ExplorerPage from './pages/ExplorerPage';
 import UserSettingsPage from './pages/UserSettingsPage';
 import UserManagementPage from './pages/UserManagementPage';
 import SessionTimeoutHandler from './components/SessionTimeoutHandler';
 import RootPage from './pages/RootPage';
+import Modal from './components/Modal';
+import ConfirmModal from './components/ConfirmModal';
+import LoadingSpinner from './components/LoadingSpinner';
+import { getProjectMetadataPath } from './utils';
 
-// Create an auth context
-interface AuthContextType {
-  isAuthenticated: boolean;
+type UserProps = {
   username: string;
-  jwtToken: string;
-  expiryTime: string;
   isAdmin: boolean;
-  login: (username: string, token: string, expiry: string, isAdmin: boolean) => void;
-  logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | null>(null);
+// Combined app context interface
+interface AppContextType {
+  // Auth properties
+  userProps: UserProps;
+  setUserProps: (userProps: UserProps) => void;
+  logout: () => void;
+  
+  // Modal properties
+  showModal: (message: string, title: string, logout?: boolean) => void;
+  showConfirm: (message: string, onConfirm: () => void, title?: string, confirmText?: string, confirmButtonClass?: string) => void;
+  
+  // Loading properties
+  setIsLoading: (loading: boolean) => void;
+  
+  // Shared URL properties
+  hostname: string | null;
+  projectName: string | null;
+  projectVersion: string | null;
+  projectMetadataPath: string | null;
+  projectRelatedQueryParams: string;
+}
 
-// Auth provider component
-export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [username, setUsername] = useState('');
-  const [jwtToken, setJwtToken] = useState('');
-  const [expiryTime, setExpiryTime] = useState('');
-  const [isAdmin, setIsAdmin] = useState(false);
+const AppContext = createContext<AppContextType | null>(null);
 
-  // Check if token exists in sessionStorage on initial load
-  useEffect(() => {
-    const storedToken = sessionStorage.getItem('jwtToken');
-    const storedUsername = sessionStorage.getItem('username');
-    const storedExpiry = sessionStorage.getItem('expiryTime');
-    const storedIsAdmin = sessionStorage.getItem('isAdmin');
-    
-    if (storedToken && storedUsername && storedExpiry) {
-      // Check if token is expired
-      const expiry = new Date(storedExpiry).getTime();
-      const now = new Date().getTime();
-      
-      if (expiry > now) {
-        setIsAuthenticated(true);
-        setUsername(storedUsername);
-        setJwtToken(storedToken);
-        setExpiryTime(storedExpiry);
-        setIsAdmin(storedIsAdmin === 'true');
-      } else {
-        // Clear expired token
-        sessionStorage.removeItem('jwtToken');
-        sessionStorage.removeItem('username');
-        sessionStorage.removeItem('expiryTime');
-        sessionStorage.removeItem('isAdmin');
-      }
+// Utility function to parse URL parameters
+const parseUrlParams = () => {
+  const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
+  const hostname = urlParams.get('host');
+  const projectName = urlParams.get('projectName');
+  const projectVersion = urlParams.get('projectVersion');
+  const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
+  
+  const queryParams = new URLSearchParams();
+  if (hostname) queryParams.append('host', hostname);
+  if (projectName) queryParams.append('projectName', projectName);
+  if (projectVersion) queryParams.append('projectVersion', projectVersion);
+  const projectRelatedQueryParams = queryParams.toString();
+  
+  return {
+    hostname,
+    projectName,
+    projectVersion,
+    projectMetadataPath,
+    projectRelatedQueryParams
+  };
+};
+
+// Combined app provider component
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  const navigate = useNavigate();
+  
+  // Parse URL parameters
+  const urlParams = useMemo(() => parseUrlParams(), [window.location.hash]);
+  const { hostname, projectName, projectVersion, projectMetadataPath, projectRelatedQueryParams } = urlParams;
+  
+  // Auth state
+  const [userProps, setUserProps] = useState<UserProps>({
+    username: '',
+    isAdmin: false
+  });
+  
+  // Modal state
+  const [modalConfig, setModalConfig] = useState<{
+    isOpen: boolean; message: string; title: string; logout?: boolean;
+  }>({ isOpen: false, message: '', title: '' });
+  
+  // Confirm modal state
+  const [confirmConfig, setConfirmConfig] = useState<{
+    isOpen: boolean; 
+    message: string; 
+    title: string; 
+    confirmText: string;
+    confirmButtonClass: string;
+    onConfirm: (() => void) | null;
+  }>({ 
+    isOpen: false, 
+    message: '', 
+    title: 'Confirm Action', 
+    confirmText: 'Confirm',
+    confirmButtonClass: 'blue-button',
+    onConfirm: null 
+  });
+  
+  // Loading state
+  const [isLoading, setIsLoading] = useState(false);
+  
+  // Auth functions
+  const logout = useCallback(() => {
+    // Attempt to call the logout endpoint, but don't wait for it
+    if (hostname) {
+      fetch(`${hostname}/api/auth/logout`, {
+        method: 'GET',
+        credentials: 'include'
+      }).catch(() => {
+        // Ignore errors, as we'll clear local state anyway
+      });
     }
+    setUserProps({
+      username: '',
+      isAdmin: false
+    });
+  }, [hostname]);
+
+  // Modal functions
+  const showModal = useCallback((message: string, title: string, logout?: boolean) => {
+    setModalConfig({ isOpen: true, message, title, logout });
   }, []);
 
-  const login = (username: string, token: string, expiry: string, isAdmin: boolean) => {
-    setIsAuthenticated(true);
-    setUsername(username);
-    setJwtToken(token);
-    setExpiryTime(expiry);
-    setIsAdmin(isAdmin);
-    
-    // Store in sessionStorage
-    sessionStorage.setItem('username', username);
-    sessionStorage.setItem('jwtToken', token);
-    sessionStorage.setItem('expiryTime', expiry);
-    sessionStorage.setItem('isAdmin', isAdmin.toString());
+  const showConfirm = useCallback((
+    message: string, 
+    onConfirm: () => void, 
+    title: string = 'Confirm Action',
+    confirmText: string = 'Confirm',
+    confirmButtonClass: string = 'blue-button'
+  ) => {
+    setConfirmConfig({ 
+      isOpen: true, 
+      message, 
+      title, 
+      confirmText,
+      confirmButtonClass,
+      onConfirm 
+    });
+  }, []);
+
+  const handleLogout = () => {
+    navigate(`/login?${projectRelatedQueryParams}`);
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    setUsername('');
-    setJwtToken('');
-    setExpiryTime('');
-    setIsAdmin(false);
+  const closeModal = () => {
+    setModalConfig({ isOpen: false, message: '', title: '' });
+    if (modalConfig.logout) {
+      handleLogout();
+    }
+  };
+
+  const clearConfirmConfig = () => {
+    setConfirmConfig({ 
+      isOpen: false, 
+      message: '', 
+      title: 'Confirm Action', 
+      confirmText: 'Confirm',
+      confirmButtonClass: 'blue-button',
+      onConfirm: null 
+    });
+  };
+
+  const handleConfirmCancel = () => {
+    clearConfirmConfig();
+  };
+
+  const handleConfirm = () => {
+    if (confirmConfig.onConfirm) {
+      confirmConfig.onConfirm();
+    }
+    clearConfirmConfig();
+  };
+
+  const contextValue: AppContextType = {
+    // Auth
+    userProps,
+    setUserProps,
+    logout,
     
-    // Remove from sessionStorage
-    sessionStorage.removeItem('username');
-    sessionStorage.removeItem('jwtToken');
-    sessionStorage.removeItem('expiryTime');
-    sessionStorage.removeItem('isAdmin');
+    // Modal
+    showModal,
+    showConfirm,
+    
+    // Loading
+    setIsLoading,
+    
+    // Shared URL params
+    hostname,
+    projectName,
+    projectVersion,
+    projectMetadataPath,
+    projectRelatedQueryParams
   };
 
   return (
-    <AuthContext.Provider value={{ 
-      isAuthenticated, 
-      username, 
-      jwtToken, 
-      expiryTime,
-      isAdmin, 
-      login, 
-      logout 
-    }}>
+    <AppContext.Provider value={contextValue}>
       {children}
-    </AuthContext.Provider>
+      <Modal
+        isOpen={modalConfig.isOpen}
+        onClose={closeModal}
+        title={modalConfig.title}
+      >
+        {modalConfig.message}
+      </Modal>
+      <ConfirmModal
+        isOpen={confirmConfig.isOpen}
+        onConfirm={handleConfirm}
+        onCancel={handleConfirmCancel}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        confirmText={confirmConfig.confirmText}
+        confirmButtonClass={confirmConfig.confirmButtonClass}
+      />
+      <LoadingSpinner isLoading={isLoading} />
+    </AppContext.Provider>
   );
 }
 
-// Hook to use the auth context
-export const useAuth = () => {
-  const context = useContext(AuthContext);
+// Hook to use the app context
+export const useApp = () => {
+  const context = useContext(AppContext);
   if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useApp must be used within an AppProvider');
   }
   return context;
 };
@@ -135,8 +255,6 @@ function AppLayout() {
     <>
       <SessionTimeoutHandler 
         hostname={hostname}
-        projectName={projectName}
-        projectVersion={projectVersion}
       />
       <Outlet />
     </>
@@ -146,37 +264,47 @@ function AppLayout() {
 // Create the router with the layout
 const router = createHashRouter([
   {
-    path: '/',
-    element: <RootPage />
-  },
-  {
-    path: '/login',
-    element: <LoginPage />
-  },
-  {
-    element: <AppLayout />,
+    element: <AppWithProvider />,
     children: [
       {
-        path: '/explorer',
-        element: <ExplorerPage />
+        path: '/',
+        element: <RootPage />
       },
       {
-        path: '/settings',
-        element: <UserSettingsPage />
+        path: '/login',
+        element: <LoginPage />
       },
       {
-        path: '/users',
-        element: <UserManagementPage />
+        element: <AppLayout />,
+        children: [
+          {
+            path: '/explorer',
+            element: <ExplorerPage />
+          },
+          {
+            path: '/settings',
+            element: <UserSettingsPage />
+          },
+          {
+            path: '/users',
+            element: <UserManagementPage />
+          }
+        ]
       }
     ]
   }
 ]);
 
+// Wrapper component that provides the app context inside the router
+function AppWithProvider() {
+  return (
+    <AppProvider>
+      <Outlet />
+    </AppProvider>
+  );
+}
+
 // Main router component
 export default function Router() {
-  return (
-    <AuthProvider>
-      <RouterProvider router={router} />
-    </AuthProvider>
-  );
+  return <RouterProvider router={router} />;
 } 
