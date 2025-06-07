@@ -1,12 +1,3 @@
-.hover-text {
-  position: absolute;
-  z-index: 1;
-  background-color: #f9f9f9;
-  /* padding: 5px; */
-  border: 1px solid #ccc;
-  border-radius: 4px;
-}
-
 input[type="range"] {
   width: 80%;
   padding: 12px 0px;

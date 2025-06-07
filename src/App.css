@@ -44,6 +44,7 @@ body {
   font-weight: 500;
   color: var(--text);
   margin-bottom: 0.5rem;
+  position: relative;
 }
 
 .widget-container {
@@ -200,6 +201,8 @@ button {
 }
 
 .hover-text {
+  position: absolute;
+  z-index: 1000;
   background-color: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
@@ -207,6 +210,12 @@ button {
   box-shadow: var(--shadow-md);
   font-size: 0.875rem;
   color: var(--text-secondary);
+  top: 100%;
+  left: 0;
+  margin-top: 4px;
+  max-width: 300px;
+  word-wrap: break-word;
+  white-space: normal;
 }
 
 /* Add styles for the pagination container */
