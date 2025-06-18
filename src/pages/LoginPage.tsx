@@ -31,7 +31,7 @@ export default function LoginPage() {
   const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
   const projectRelatedQueryParams = getProjectRelatedQueryParams(hostname, projectName, projectVersion);
   const targetRedirectPath = searchParams.get('redirectPath') || `/explorer?${projectRelatedQueryParams}`;
-  const redirectUrl = `${window.location.origin}/squirrels-studio/#${targetRedirectPath}`;
+  const redirectUrl = `${window.location.origin}/squirrels-studio-v1/#${targetRedirectPath}`;
 
   useEffect(() => {
     logout();
