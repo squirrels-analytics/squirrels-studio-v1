@@ -8,20 +8,11 @@ export function log(...data: any[]) {
   }
 }
 
-export function getHashParams(): URLSearchParams {
-  const hash = window.location.hash;
-  const queryIndex = hash.indexOf('?');
-  return new URLSearchParams(queryIndex >= 0 ? hash.substring(queryIndex + 1) : '');
-}
-
-export function getProjectMetadataPath(projectName: string | null, projectVersion: string | null): string | null {
-  if (!projectName || !projectVersion) {
-    return null;
-  }
+export function getProjectMetadataPath(projectName: string | null, projectVersion: string | null): string {
   return `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
 }
 
-export function getProjectRelatedQueryParams(hostname: string | null, projectName: string | null, projectVersion: string | null): string {
+export function getProjectRelatedQueryParams(hostname: string, projectName: string, projectVersion: string): string {
   if (!hostname || !projectName || !projectVersion) {
     return "";
   }

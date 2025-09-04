@@ -21,6 +21,14 @@ export default function RootPage() {
     sessionStorage.removeItem('isAdmin');
   }, []);
 
+  // If DEFAULT_* globals are defined, redirect to login with those params
+  useEffect(() => {
+    const { DEFAULT_PROJECT_NAME, DEFAULT_PROJECT_VERSION } = window;
+    if (DEFAULT_PROJECT_NAME && DEFAULT_PROJECT_VERSION) {
+      navigate(`/login`);
+    }
+  }, [navigate]);
+
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setFormData((prevFormData) => ({
@@ -41,6 +49,9 @@ export default function RootPage() {
         throw new Error('Host URL must start with http:// or https://');
       }
       const projectMetadataPath = getProjectMetadataPath(formData.projectName, formData.projectVersion);
+      if (!projectMetadataPath) {
+        throw new Error('Project name and version are required');
+      }
       const response = await fetch(formData.hostname + projectMetadataPath);
       if (!response.ok) {
         throw new Error(`Connection failed: ${response.status} ${response.statusText}`);
@@ -76,7 +87,6 @@ export default function RootPage() {
               value={formData.hostname}
               onChange={handleInputChange}
               placeholder="e.g. http://localhost:4465"
-              required
             />
           </div>
           
@@ -90,7 +100,6 @@ export default function RootPage() {
               value={formData.projectName}
               onChange={handleInputChange}
               placeholder="Enter project name"
-              required
             />
           </div>
           
@@ -104,7 +113,6 @@ export default function RootPage() {
               value={formData.projectVersion}
               onChange={handleInputChange}
               placeholder="e.g. v1"
-              required
             />
           </div>
           

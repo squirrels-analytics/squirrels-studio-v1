@@ -11,6 +11,19 @@ import ConfirmModal from './components/ConfirmModal';
 import LoadingSpinner from './components/LoadingSpinner';
 import { getProjectMetadataPath } from './utils';
 
+// Global defaults for project parameters (can be set from index.html)
+declare global {
+  interface Window {
+    DEFAULT_HOSTNAME?: string;
+    DEFAULT_PROJECT_NAME?: string;
+    DEFAULT_PROJECT_VERSION?: string;
+  }
+}
+
+const defaultHostname: string = window.DEFAULT_HOSTNAME ?? "";
+const defaultProjectName: string | null = window.DEFAULT_PROJECT_NAME ?? null;
+const defaultProjectVersion: string | null = window.DEFAULT_PROJECT_VERSION ?? null;
+
 type UserProps = {
   username: string;
   isAdmin: boolean;
@@ -31,7 +44,7 @@ interface AppContextType {
   setIsLoading: (loading: boolean) => void;
   
   // Shared URL properties
-  hostname: string | null;
+  hostname: string;
   projectName: string | null;
   projectVersion: string | null;
   projectMetadataPath: string | null;
@@ -43,16 +56,12 @@ const AppContext = createContext<AppContextType | null>(null);
 // Utility function to parse URL parameters
 const parseUrlParams = () => {
   const urlParams = new URLSearchParams(window.location.hash.split('?')[1]);
-  const hostname = urlParams.get('host');
-  const projectName = urlParams.get('projectName');
-  const projectVersion = urlParams.get('projectVersion');
-  const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
+  const projectRelatedQueryParams = urlParams.toString();
   
-  const queryParams = new URLSearchParams();
-  if (hostname) queryParams.append('host', hostname);
-  if (projectName) queryParams.append('projectName', projectName);
-  if (projectVersion) queryParams.append('projectVersion', projectVersion);
-  const projectRelatedQueryParams = queryParams.toString();
+  const hostname = urlParams.get('host') || defaultHostname;
+  const projectName = urlParams.get('projectName') || defaultProjectName;
+  const projectVersion = urlParams.get('projectVersion') || defaultProjectVersion;
+  const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
   
   return {
     hostname,
@@ -231,23 +240,17 @@ export const useApp = () => {
 // Create a layout component that includes the SessionTimeoutHandler
 function AppLayout() {
   const navigate = useNavigate();
-  const location = window.location;
-  
-  // Parse parameters from hash fragment instead of search params
-  const hashParams = new URLSearchParams(location.hash.split('?')[1] || '');
-  const hostname = hashParams.get('host');
-  const projectName = hashParams.get('projectName');
-  const projectVersion = hashParams.get('projectVersion');
+  const { hostname, projectName, projectVersion } = useApp();
   
   // Use useEffect for navigation to avoid render issues
   useEffect(() => {
-    if (!hostname || !projectName || !projectVersion) {
+    if (!projectName || !projectVersion) {
       navigate('/');
     }
-  }, [hostname, projectName, projectVersion, navigate]);
+  }, [projectName, projectVersion, navigate]);
 
   // Only render the content if we have all required parameters
-  if (!hostname || !projectName || !projectVersion) {
+  if (!projectName || !projectVersion) {
     return null;
   }
 

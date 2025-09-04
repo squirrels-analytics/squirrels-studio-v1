@@ -1,7 +1,7 @@
 import { useState, MutableRefObject, useEffect } from 'react';
 import { log } from '../utils';
 import { ParamDataType, ParameterType } from '../types/ParametersResponse';
-import { DataObjectType, DashboardType, DataCatalogType, OutputFormatEnum, ModelType, DatasetType, LineageType, DataTypeType, ConnectionType } from '../types/DataCatalogResponse';
+import { DataObjectType, DashboardType, DataCatalogType, OutputFormatEnum, ModelType, DatasetType, LineageType, DataTypeType, ConnectionType, ConfigurablesType } from '../types/DataCatalogResponse';
 
 
 interface SettingsProps {
@@ -18,11 +18,12 @@ interface SettingsProps {
     setModels: (x: ModelType[]) => void;
     setConnections: (x: ConnectionType[]) => void;
     setLineageData: (x: LineageType[]) => void;
+    setConfigurables: (x: ConfigurablesType[]) => void;
 }
 
 export default function Settings({ 
     projectMetadataPath, parametersURL, resultsURL, fetchJson, setParamData, clearTableData, setOutputFormat, isAdmin, 
-    dataMode, toggleDataMode, setModels, setConnections, setLineageData
+    dataMode, toggleDataMode, setModels, setConnections, setLineageData, setConfigurables
 }: SettingsProps) {
 
     const [datasetsObjList, setDatasetsObjList] = useState<DatasetType[]>([]);
@@ -40,6 +41,7 @@ export default function Settings({
             setDatasetsObjList(x.datasets);
             setDashboardsObjList(x.dashboards);
             setLineageData(x.lineage);
+            setConfigurables(x.configurables || []);
         });
     }, [fetchJson]);
 

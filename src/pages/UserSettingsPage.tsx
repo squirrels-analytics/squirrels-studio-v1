@@ -43,12 +43,12 @@ export default function UserSettingsPage() {
 
   // Add useEffect for navigation
   useEffect(() => {
-    if (!hostname || !projectName || !projectVersion) {
+    if (!projectName || !projectVersion) {
       navigate('/');
     }
-  }, [hostname, projectName, projectVersion, isAuthenticated, navigate]);
+  }, [projectName, projectVersion, isAuthenticated, navigate]);
 
-  if (!hostname || !projectName || !projectVersion) {
+  if (!projectName || !projectVersion) {
     return null;
   }
 

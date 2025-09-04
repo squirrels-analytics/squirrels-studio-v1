@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import './LoginPage.css';
-import { getHashParams, getProjectMetadataPath, getProjectRelatedQueryParams } from '../utils';
 import { useApp } from '../Router';
 
 interface Provider {
@@ -14,7 +13,8 @@ interface Provider {
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { logout } = useApp();
+  const location = useLocation();
+  const { hostname, projectName, projectVersion, projectMetadataPath, logout } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -23,14 +23,7 @@ export default function LoginPage() {
     password: ''
   });
 
-  const searchParams = getHashParams();
-  const hostname = searchParams.get('host');
-  const projectName = searchParams.get('projectName');
-  const projectVersion = searchParams.get('projectVersion');
-
-  const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
-  const projectRelatedQueryParams = getProjectRelatedQueryParams(hostname, projectName, projectVersion);
-  const targetRedirectPath = searchParams.get('redirectPath') || `/explorer?${projectRelatedQueryParams}`;
+  const targetRedirectPath = `/explorer${location.search || ''}`;
   const redirectUrl = `${window.location.origin}/squirrels-studio-v1/#${targetRedirectPath}`;
 
   useEffect(() => {
@@ -38,10 +31,10 @@ export default function LoginPage() {
   }, [logout]);
 
   useEffect(() => {
-    if (!hostname || !projectMetadataPath) {
+    if (!projectMetadataPath) {
       navigate('/');
     }
-  }, [hostname, projectMetadataPath, navigate]);
+  }, [projectMetadataPath, navigate]);
 
   useEffect(() => {
     const fetchProviders = async () => {
@@ -70,7 +63,7 @@ export default function LoginPage() {
   };
 
   const handleGuestAccess = () => {
-    navigate(`/explorer?${projectRelatedQueryParams}`);
+    navigate(targetRedirectPath);
   };
 
   const handleSubmit = async (event: React.FormEvent) => {

@@ -1,10 +1,5 @@
 /* Styles specific to the Explorer page */
 
-.config-input {
-  max-width: 80px;
-  padding: 6px 10px;
-}
-
 /* Update the menu styles */
 .menu-panel {
   position: absolute;
@@ -69,11 +64,13 @@
   color: var(--text);
   white-space: nowrap;
   margin: 0;
+  flex: 1;
 }
 
 .menu-config-item input {
-  width: 100%;
+  flex: 1;
   margin: 0;
+  padding: 6px 10px;
 }
 
 .resize-handle {

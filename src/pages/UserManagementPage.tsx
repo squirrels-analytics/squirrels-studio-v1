@@ -32,7 +32,7 @@ export default function UserManagementPage() {
   const [editUserData, setEditUserData] = useState<Record<string, any>>({});
 
   useEffect(() => {
-    if (!hostname || !projectMetadataPath) {
+    if (!projectMetadataPath) {
       navigate('/');
     }
     
@@ -40,7 +40,7 @@ export default function UserManagementPage() {
       fetchUsers();
       fetchUserFields();
     }
-  }, [hostname, projectMetadataPath, isAuthenticated, navigate]);
+  }, [projectMetadataPath, isAuthenticated, navigate]);
 
   const fetchUsers = async () => {
     setIsLoading(true);
