@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../Router';
 import { FaCopy, FaBars } from 'react-icons/fa';
@@ -10,7 +10,7 @@ import { Prec } from '@codemirror/state';
 
 import { ParamDataType, ParameterType } from '../types/ParametersResponse.js';
 import { TableDataType } from '../types/DatasetResponse.js';
-import { OutputFormatEnum, ModelType, LineageType, DataTypeType, ConnectionType } from '../types/DataCatalogResponse.js';
+import { OutputFormatEnum, ModelType, LineageType, DataTypeType, ConnectionType, ConfigurablesType } from '../types/DataCatalogResponse.js';
 import Settings from '../components/Settings.js'
 import ResultTable from '../components/ResultTable.js';
 import { ParametersContainer } from '../components/ParameterWidgets.js';
@@ -57,13 +57,15 @@ async function copyTableData(tableData: TableDataType): Promise<string | null> {
 
 async function callAPI(
     url: string, username: string, callback: (x: Response) => Promise<void>, 
-    setIsLoading: (x: boolean) => void, showModal: (message: string, title: string, logout: boolean) => void
+    setIsLoading: (x: boolean) => void, showModal: (message: string, title: string, logout: boolean) => void,
+    extraHeaders?: Record<string, string>
 ) {
     setIsLoading(true);
 
     try {
         const response = await fetch(url, {
-            credentials: 'include'
+            credentials: 'include',
+            headers: extraHeaders
         });
 
         const appliedUsername = response.headers.get("Applied-Username");
@@ -93,18 +95,19 @@ async function callAPI(
 
 async function callJsonAPI(
     url: string, username: string, callback: (x: any) => Promise<void>, 
-    setIsLoading: (x: boolean) => void, showModal: (message: string, title: string, logout: boolean) => void
+    setIsLoading: (x: boolean) => void, showModal: (message: string, title: string, logout: boolean) => void,
+    extraHeaders?: Record<string, string>
 ) {
     const newCallback = async (x: Response) => {
         const data = await x.json();
         await callback(data);
     };
-    await callAPI(url, username, newCallback, setIsLoading, showModal);
+    await callAPI(url, username, newCallback, setIsLoading, showModal, extraHeaders);
 }
 
 export default function ExplorerPage() {
     const navigate = useNavigate();
-        const { 
+    const { 
         userProps, 
         setUserProps, 
         showModal,
@@ -118,7 +121,7 @@ export default function ExplorerPage() {
     
     // Fetch user properties on mount
     useEffect(() => {
-        if (!hostname || !projectMetadataPath) {
+        if (!projectMetadataPath) {
           navigate('/');
           return;
         }
@@ -174,6 +177,8 @@ export default function ExplorerPage() {
     const [connections, setConnections] = useState<ConnectionType[]>([]);
     const [lineageData, setLineageData] = useState<LineageType[]>([]);
     const [dataMode, toggleDataMode] = useState<DataTypeType>("dataset");
+    const [configurables, setConfigurables] = useState<ConfigurablesType[]>([]);
+    const [configValues, setConfigValues] = useState<Record<string, string>>({});
 
     const [explorerHeight, setExplorerHeight] = useState(150);
     const resizeStartPosition = useRef(0);
@@ -184,14 +189,14 @@ export default function ExplorerPage() {
 
     const [explorerWidth, setExplorerWidth] = useState(320);
 
-    const fetchJson = useCallback(async (urlPath: string, callback: (x: any) => Promise<void>) => {
+    const fetchJson = useCallback(async (urlPath: string, callback: (x: any) => Promise<void>, headers?: Record<string, string>) => {
         if (!urlPath) return;
-        await callJsonAPI(hostname + urlPath, username, callback, setIsLoading, showModal);
+        await callJsonAPI(hostname + urlPath, username, callback, setIsLoading, showModal, headers);
     }, [username]);
 
-    const fetchHTTPResponse = useCallback(async (urlPath: string, callback: (x: Response) => Promise<void>) => {
+    const fetchHTTPResponse = useCallback(async (urlPath: string, callback: (x: Response) => Promise<void>, headers?: Record<string, string>) => {
         if (!urlPath) return;
-        await callAPI(hostname + urlPath, username, callback, setIsLoading, showModal);
+        await callAPI(hostname + urlPath, username, callback, setIsLoading, showModal, headers);
     }, [username]);
 
     useEffect(() => {
@@ -247,6 +252,15 @@ export default function ExplorerPage() {
         return url + '?' + queryParams;
     }
 
+    const requestHeaders = useMemo(() => {
+        const headers: Record<string, string> = {};
+        configurables.forEach(cfg => {
+            const headerName = `x-configurables-${cfg.name.replace("_", "-")}`;
+            headers[headerName] = configValues[cfg.name] || '';
+        });
+        return headers;
+    }, [configurables, configValues]);
+
     const handlePagination = (direction: 'first' | 'prev' | 'next' | 'last') => {
         if (!lastRequest) return;
         
@@ -268,7 +282,7 @@ export default function ExplorerPage() {
 
         fetchJson(requestURL, async (data: TableDataType) => {
             setResultContent(data);
-        });
+        }, requestHeaders);
     };
 
     const updateTableData = (paramSelections: Map<string, string[]>) => {
@@ -292,7 +306,7 @@ export default function ExplorerPage() {
                 null;
             setResultContent(data);
         }
-        fetchHTTPResponse(requestURL, callback);
+        fetchHTTPResponse(requestURL, callback, requestHeaders);
     };
 
     const handleRunQuery = (paramSelections: Map<string, string[]>, query: string) => {
@@ -312,7 +326,7 @@ export default function ExplorerPage() {
 
         fetchJson(requestURL, async (data: TableDataType) => {
             setResultContent(data);
-        });
+        }, requestHeaders);
     };
 
     useEffect(() => {
@@ -332,6 +346,21 @@ export default function ExplorerPage() {
             document.removeEventListener('mousedown', handleClickOutside);
         };
     }, [showMenu]);
+
+    // Initialize/merge configuration values when configurables change
+    useEffect(() => {
+        setConfigValues(prev => {
+            const next: Record<string, string> = { ...prev };
+            configurables.forEach(cfg => {
+                if (!(cfg.name in next)) next[cfg.name] = cfg.default || '';
+            });
+            // Remove values for configurables no longer present
+            Object.keys(next).forEach(key => {
+                if (!configurables.find(c => c.name === key)) delete next[key];
+            });
+            return next;
+        });
+    }, [configurables]);
 
     const handleCopyTable = async () => {
         if (resultContent === null || outputFormat !== OutputFormatEnum.TABLE) return;
@@ -410,12 +439,24 @@ export default function ExplorerPage() {
                         {outputFormat === OutputFormatEnum.TABLE && (
                             <li className="menu-section">
                                 <div className="menu-section-header">Configurations</div>
+                                {configurables.map(cfg => (
+                                    <div className="menu-config-item" key={cfg.name}>
+                                        <label htmlFor={`cfg-${cfg.name}`} style={{cursor: 'help'}} title={cfg.description || ''}>{cfg.label || cfg.name}:</label>
+                                        <input
+                                            id={`cfg-${cfg.name}`}
+                                            type="text"
+                                            className="widget"
+                                            value={configValues[cfg.name] ?? ''}
+                                            onChange={(e) => setConfigValues(v => ({ ...v, [cfg.name]: e.target.value }))}
+                                        />
+                                    </div>
+                                ))}
                                 <div className="menu-config-item">
-                                    <label htmlFor="rows-per-page">Rows per page:</label>
+                                    <label htmlFor="rows-per-page">Rows per Page:</label>
                                     <input
                                         id="rows-per-page"
                                         type="number"
-                                        className="widget config-input"
+                                        className="widget"
                                         value={configureOptions.limit}
                                         min={1}
                                         onChange={(e) => setConfigureOptions({
@@ -572,6 +613,7 @@ export default function ExplorerPage() {
                             setModels={setModels}
                             setConnections={setConnections}
                             setLineageData={setLineageData}
+                            setConfigurables={setConfigurables}
                         />
                         <br/><hr/><br/>
                         <ParametersContainer 
@@ -604,7 +646,7 @@ export default function ExplorerPage() {
                         </div>
                         <div className="header-buttons">
                             {menuButton}
-                            {copyTableButton}
+                            {(resultContent !== null && outputFormat === OutputFormatEnum.TABLE) ? copyTableButton : null}
                         </div>
                     </div>
                 </div>

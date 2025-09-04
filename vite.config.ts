@@ -8,12 +8,11 @@ export default defineConfig({
   build: {
     rollupOptions: {
       output: {
-        inlineDynamicImports: true,
-        entryFileNames: 'index.js',
-        chunkFileNames: 'index.js',
+        entryFileNames: 'assets/index.js',
         assetFileNames: (assetInfo) => {
-          if (assetInfo.name && assetInfo.name.endsWith('.css')) {
-            return 'index.css'
+          const isCss = assetInfo.originalFileNames.some((n) => typeof n === 'string' && /\.css$/i.test(n))
+          if (isCss) {
+            return 'assets/index.css'
           }
           return 'assets/[name][extname]'
         },

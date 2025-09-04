@@ -61,6 +61,13 @@ export interface LineageType {
     target: LineageNodeType;
 }
 
+export interface ConfigurablesType {
+    name: string;
+    label: string;
+    description: string;
+    default: string;
+}
+
 export interface DataCatalogType {
     parameters: ParameterType[];
     datasets: DatasetType[];
@@ -68,4 +75,5 @@ export interface DataCatalogType {
     connections: ConnectionType[];
     models: ModelType[];
     lineage: LineageType[];
+    configurables?: ConfigurablesType[];
 }
