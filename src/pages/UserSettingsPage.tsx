@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../Router';
 import { FaKey, FaLock, FaTrash, FaPlus, FaInfinity, FaCopy, FaExclamationTriangle } from 'react-icons/fa';
 import './UserSettingsPage.css';
+import { AUTH_PATH } from '../utils';
 
 
 interface ApiKey {
@@ -55,8 +56,8 @@ export default function UserSettingsPage() {
   const fetchApiKeys = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${hostname}/api/auth/api-key`, {
-        credentials: 'include'
+      const response = await fetch(`${hostname}${AUTH_PATH}/api-key`, {
+        credentials: 'include',
       });
 
       if (response.status === 200) {
@@ -94,7 +95,7 @@ export default function UserSettingsPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}/api/auth/api-key`, {
+      const response = await fetch(`${hostname}${AUTH_PATH}/api-key`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -149,7 +150,7 @@ export default function UserSettingsPage() {
       setSuccessMessage('');
 
       try {
-        const response = await fetch(`${hostname}/api/auth/api-key/${apiKeyId}`, {
+        const response = await fetch(`${hostname}${AUTH_PATH}/api-key/${apiKeyId}`, {
           method: 'DELETE',
           credentials: 'include'
         });
@@ -190,7 +191,7 @@ export default function UserSettingsPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}/api/auth/change-password`, {
+      const response = await fetch(`${hostname}${AUTH_PATH}/change-password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

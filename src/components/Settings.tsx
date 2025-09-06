@@ -58,7 +58,7 @@ export default function Settings({
             log("no datasets or dashboards found...");
             setDataObj(null);
         }
-    }, [dataMode, datasetsObjList, dashboardsObjList])
+    }, [dataMode, datasetsObjList, dashboardsObjList]);
     
     useEffect(() => {
         if (dataMode === "dashboard") {

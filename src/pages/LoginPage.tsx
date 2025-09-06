@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import './LoginPage.css';
 import { useApp } from '../Router';
+import { AUTH_PATH } from '../utils';
 
 interface Provider {
   name: string;
@@ -14,7 +15,7 @@ interface Provider {
 export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { hostname, projectName, projectVersion, projectMetadataPath, logout } = useApp();
+  const { hostname, projectName, projectVersion, projectMetadataPath } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [providers, setProviders] = useState<Provider[]>([]);
@@ -27,10 +28,6 @@ export default function LoginPage() {
   const redirectUrl = `${window.location.origin}/squirrels-studio-v1/#${targetRedirectPath}`;
 
   useEffect(() => {
-    logout();
-  }, [logout]);
-
-  useEffect(() => {
     if (!projectMetadataPath) {
       navigate('/');
     }
@@ -39,7 +36,7 @@ export default function LoginPage() {
   useEffect(() => {
     const fetchProviders = async () => {
       try {
-        const response = await fetch(`${hostname}/api/auth/providers`);
+        const response = await fetch(`${hostname}${AUTH_PATH}/providers`);
         if (response.ok) {
           const data = await response.json();
           setProviders(data);
@@ -49,9 +46,7 @@ export default function LoginPage() {
       }
     };
 
-    if (hostname) {
-      fetchProviders();
-    }
+    fetchProviders();
   }, [hostname]);
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -77,7 +72,7 @@ export default function LoginPage() {
       loginData.append('password', formData.password);
       
       // Construct the login path
-      const loginPath = `/api/auth/login`;
+      const loginPath = `${AUTH_PATH}/login`;
       
       const response = await fetch(hostname + loginPath, {
         method: 'POST',

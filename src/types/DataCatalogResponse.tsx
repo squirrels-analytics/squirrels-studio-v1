@@ -75,5 +75,5 @@ export interface DataCatalogType {
     connections: ConnectionType[];
     models: ModelType[];
     lineage: LineageType[];
-    configurables?: ConfigurablesType[];
+    configurables: ConfigurablesType[];
 }

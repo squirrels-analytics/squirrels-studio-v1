@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../Router';
-import { FaCopy, FaBars } from 'react-icons/fa';
+import { FaCopy, FaBars, FaCog } from 'react-icons/fa';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
 import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
@@ -15,7 +15,7 @@ import Settings from '../components/Settings.js'
 import ResultTable from '../components/ResultTable.js';
 import { ParametersContainer } from '../components/ParameterWidgets.js';
 import './ExplorerPage.css';
-import { validateSquirrelsVersion } from '../utils';
+import { validateSquirrelsVersion, AUTH_PATH } from '../utils';
 import ModelExplorer from '../components/ModelExplorer';
 import LineageGraph from '../components/LineageGraph';
 import { ProjectMetadataType } from '../types/ProjectMetadataResponse.js';
@@ -110,6 +110,7 @@ export default function ExplorerPage() {
     const { 
         userProps, 
         setUserProps, 
+        logout,
         showModal,
         setIsLoading,
         hostname, 
@@ -128,7 +129,7 @@ export default function ExplorerPage() {
 
         const fetchUserProps = async () => {
           try {
-            const response = await fetch(`${hostname}/api/auth/userinfo`, {
+            const response = await fetch(`${hostname}${AUTH_PATH}/userinfo`, {
               credentials: 'include'
             });
             
@@ -166,8 +167,11 @@ export default function ExplorerPage() {
     const [resultContent, setResultContent] = useState<TableDataType | string | null>(null);
     const [outputFormat, setOutputFormat] = useState(OutputFormatEnum.UNSET);
     const [showMenu, setShowMenu] = useState(false);
+    const [showConfigMenu, setShowConfigMenu] = useState(false);
     const menuRef = useRef<HTMLDivElement>(null);
     const menuButtonRef = useRef<HTMLButtonElement>(null);
+    const configMenuRef = useRef<HTMLDivElement>(null);
+    const configButtonRef = useRef<HTMLButtonElement>(null);
     const [configureOptions, setConfigureOptions] = useState<ConfigureOptions>({
         limit: 1000
     });
@@ -255,7 +259,7 @@ export default function ExplorerPage() {
     const requestHeaders = useMemo(() => {
         const headers: Record<string, string> = {};
         configurables.forEach(cfg => {
-            const headerName = `x-configurables-${cfg.name.replace("_", "-")}`;
+            const headerName = `x-config-${cfg.name.replace("_", "-")}`;
             headers[headerName] = configValues[cfg.name] || '';
         });
         return headers;
@@ -336,16 +340,21 @@ export default function ExplorerPage() {
                 !menuButtonRef.current?.contains(event.target as Node)) {
                 setShowMenu(false);
             }
+            if (configMenuRef.current && 
+                !configMenuRef.current.contains(event.target as Node) && 
+                !configButtonRef.current?.contains(event.target as Node)) {
+                setShowConfigMenu(false);
+            }
         }
 
-        if (showMenu) {
+        if (showMenu || showConfigMenu) {
             document.addEventListener('mousedown', handleClickOutside);
         }
 
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
         };
-    }, [showMenu]);
+    }, [showMenu, showConfigMenu]);
 
     // Initialize/merge configuration values when configurables change
     useEffect(() => {
@@ -379,7 +388,6 @@ export default function ExplorerPage() {
         <button 
             className="white-button" 
             onClick={handleCopyTable}
-            disabled={resultContent === null || outputFormat !== OutputFormatEnum.TABLE}
             style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
         >
             <FaCopy /> Copy
@@ -428,7 +436,10 @@ export default function ExplorerPage() {
                             )}
                             <div 
                                 className="menu-item"
-                                onClick={() => {
+                                onClick={async () => {
+                                    if (username) {
+                                        await logout();
+                                    }
                                     navigate(`/login?${projectRelatedQueryParams}`);
                                     setShowMenu(false);
                                 }}
@@ -436,21 +447,43 @@ export default function ExplorerPage() {
                                 {username ? 'Logout' : 'Login'}
                             </div>
                         </li>
-                        {outputFormat === OutputFormatEnum.TABLE && (
-                            <li className="menu-section">
-                                <div className="menu-section-header">Configurations</div>
-                                {configurables.map(cfg => (
-                                    <div className="menu-config-item" key={cfg.name}>
-                                        <label htmlFor={`cfg-${cfg.name}`} style={{cursor: 'help'}} title={cfg.description || ''}>{cfg.label || cfg.name}:</label>
-                                        <input
-                                            id={`cfg-${cfg.name}`}
-                                            type="text"
-                                            className="widget"
-                                            value={configValues[cfg.name] ?? ''}
-                                            onChange={(e) => setConfigValues(v => ({ ...v, [cfg.name]: e.target.value }))}
-                                        />
-                                    </div>
-                                ))}
+                    </ul>
+                </div>
+            )}
+        </div>
+    );
+
+    const configButton = (
+        <div className="menu-button-container">
+            <button 
+                className="white-button" 
+                ref={configButtonRef}
+                onClick={(e) => {
+                    e.stopPropagation();
+                    setShowConfigMenu(!showConfigMenu);
+                }}
+                style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
+            >
+                <FaCog />
+            </button>
+            {showConfigMenu && (
+                <div className="menu-panel" ref={configMenuRef}>
+                    <ul className="menu-list">
+                        <li className="menu-section">
+                            <div className="menu-section-header">Configurations</div>
+                            {configurables.map(cfg => (
+                                <div className="menu-config-item" key={cfg.name}>
+                                    <label htmlFor={`cfg-${cfg.name}`} style={{cursor: 'help'}} title={cfg.description || ''}>{cfg.label || cfg.name}:</label>
+                                    <input
+                                        id={`cfg-${cfg.name}`}
+                                        type="text"
+                                        className="widget"
+                                        value={configValues[cfg.name] ?? ''}
+                                        onChange={(e) => setConfigValues(v => ({ ...v, [cfg.name]: e.target.value }))}
+                                    />
+                                </div>
+                            ))}
+                            {outputFormat === OutputFormatEnum.TABLE && (
                                 <div className="menu-config-item">
                                     <label htmlFor="rows-per-page">Rows per Page:</label>
                                     <input
@@ -465,8 +498,8 @@ export default function ExplorerPage() {
                                         })}
                                     />
                                 </div>
-                            </li>
-                        )}
+                            )}
+                        </li>
                     </ul>
                 </div>
             )}
@@ -634,6 +667,7 @@ export default function ExplorerPage() {
                         </div>
                     )}
                 </div>
+                
                 <div id="header-container">
                     <span style={{margin: "0 0.5rem"}}><b>Project Name:</b> {projectMetadata?.label || ''} ({projectVersion})</span>
                     <div className="horizontal-container">
@@ -645,8 +679,9 @@ export default function ExplorerPage() {
                             )}
                         </div>
                         <div className="header-buttons">
+                            {resultContent !== null && outputFormat === OutputFormatEnum.TABLE && copyTableButton}
                             {menuButton}
-                            {(resultContent !== null && outputFormat === OutputFormatEnum.TABLE) ? copyTableButton : null}
+                            {outputFormat !== OutputFormatEnum.UNSET && configButton}
                         </div>
                     </div>
                 </div>

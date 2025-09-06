@@ -4,6 +4,7 @@ import { useApp } from '../Router';
 import { FaUserPlus, FaTrash, FaArrowLeft, FaEdit } from 'react-icons/fa';
 import { User, UserField } from '../types/UserManagement';
 import './UserManagementPage.css';
+import { AUTH_PATH } from '../utils';
 
 
 export default function UserManagementPage() {
@@ -45,7 +46,7 @@ export default function UserManagementPage() {
   const fetchUsers = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${hostname}/api/auth/user-management/users`, {
+      const response = await fetch(`${hostname}${AUTH_PATH}/user-management/users`, {
         credentials: 'include'
       });
 
@@ -67,7 +68,7 @@ export default function UserManagementPage() {
 
   const fetchUserFields = async () => {
     try {
-      const response = await fetch(`${hostname}/api/auth/user-management/user-fields`, {
+      const response = await fetch(`${hostname}${AUTH_PATH}/user-management/user-fields`, {
         credentials: 'include'
       });
 
@@ -99,7 +100,7 @@ export default function UserManagementPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}/api/auth/user-management/users`, {
+      const response = await fetch(`${hostname}${AUTH_PATH}/user-management/users`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -143,7 +144,7 @@ export default function UserManagementPage() {
       setSuccessMessage('');
 
       try {
-        const response = await fetch(`${hostname}/api/auth/user-management/users/${username}`, {
+        const response = await fetch(`${hostname}${AUTH_PATH}/user-management/users/${username}`, {
           method: 'DELETE',
           credentials: 'include'
         });
@@ -219,7 +220,7 @@ export default function UserManagementPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}/api/auth/user-management/users/${editUserData.username}`, {
+      const response = await fetch(`${hostname}${AUTH_PATH}/user-management/users/${editUserData.username}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

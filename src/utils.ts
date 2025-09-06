@@ -8,8 +8,10 @@ export function log(...data: any[]) {
   }
 }
 
+export const AUTH_PATH = "/api/squirrels/v0/auth";
+
 export function getProjectMetadataPath(projectName: string | null, projectVersion: string | null): string {
-  return `/api/squirrels-v0/project/${projectName}/${projectVersion}`;
+  return `/api/squirrels/v0/project/${projectName}/${projectVersion}`;
 }
 
 export function getProjectRelatedQueryParams(hostname: string, projectName: string, projectVersion: string): string {

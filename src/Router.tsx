@@ -9,7 +9,7 @@ import RootPage from './pages/RootPage';
 import Modal from './components/Modal';
 import ConfirmModal from './components/ConfirmModal';
 import LoadingSpinner from './components/LoadingSpinner';
-import { getProjectMetadataPath } from './utils';
+import { getProjectMetadataPath, AUTH_PATH } from './utils';
 
 // Global defaults for project parameters (can be set from index.html)
 declare global {
@@ -34,7 +34,7 @@ interface AppContextType {
   // Auth properties
   userProps: UserProps;
   setUserProps: (userProps: UserProps) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
   
   // Modal properties
   showModal: (message: string, title: string, logout?: boolean) => void;
@@ -112,16 +112,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(false);
   
   // Auth functions
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     // Attempt to call the logout endpoint, but don't wait for it
-    if (hostname) {
-      fetch(`${hostname}/api/auth/logout`, {
-        method: 'GET',
-        credentials: 'include'
-      }).catch(() => {
-        // Ignore errors, as we'll clear local state anyway
-      });
-    }
+    await fetch(`${hostname}${AUTH_PATH}/logout`, {
+      method: 'GET',
+      credentials: 'include'
+    });
     setUserProps({
       username: '',
       isAdmin: false

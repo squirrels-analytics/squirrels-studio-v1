@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useApp } from '../Router';
+import { AUTH_PATH } from '../utils';
 
 interface SessionTimeoutHandlerProps {
   hostname: string;
@@ -25,7 +26,7 @@ export default function SessionTimeoutHandler({
       const checkAuthStatus = async () => {
         try {
           // Use the /userinfo endpoint to check if the user is still authenticated
-          const response = await fetch(`${hostname}/api/auth/userinfo`, {
+          const response = await fetch(`${hostname}${AUTH_PATH}/userinfo`, {
             credentials: 'include'
           });
           
