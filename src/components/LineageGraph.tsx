@@ -140,7 +140,7 @@ export default function LineageGraph({ lineageData, models, datasets, dashboards
   const [selectedDashboard, setSelectedDashboard] = useState<DashboardType | null>(null);
 
   // Handler for opening model metadata modal
-  const handleShowMetadata = (type: string, name: string) => {
+  const handleShowMetadata = useCallback((type: string, name: string) => {
     if (type === 'model') {
       const model = models.find(m => m.name === name);
       setSelectedModel(model || null);
@@ -153,7 +153,7 @@ export default function LineageGraph({ lineageData, models, datasets, dashboards
       setSelectedDashboard(dashboard || null);
     }
     setIsModalOpen(true);
-  };
+  }, [models, datasets, dashboards]);
 
   // Handler for closing modal
   const handleCloseModal = () => {
@@ -378,7 +378,7 @@ export default function LineageGraph({ lineageData, models, datasets, dashboards
     const { initialNodes, initialEdges } = createNodesAndEdges();
     setNodes(initialNodes);
     setEdges(initialEdges);
-  }, [lineageData]);
+  }, [createNodesAndEdges]);
 
   return (
     <div className="lineage-graph-container">
