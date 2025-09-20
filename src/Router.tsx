@@ -37,8 +37,8 @@ interface AppContextType {
   logout: () => Promise<void>;
   
   // Modal properties
-  showModal: (message: string, title: string, logout?: boolean) => void;
-  showConfirm: (message: string, onConfirm: () => void, title?: string, confirmText?: string, confirmButtonClass?: string) => void;
+  showModal: (props: { message: string, title: string, size?: 'small' | 'medium' | 'large', logout?: boolean }) => void;
+  showConfirm: (props: { message: string, onConfirm: () => void, title?: string, confirmText?: string, confirmButtonClass?: string }) => void;
   
   // Loading properties
   setIsLoading: (loading: boolean) => void;
@@ -88,8 +88,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   
   // Modal state
   const [modalConfig, setModalConfig] = useState<{
-    isOpen: boolean; message: string; title: string; logout?: boolean;
-  }>({ isOpen: false, message: '', title: '' });
+    isOpen: boolean; message: string; title: string; size: 'small' | 'medium' | 'large'; logout?: boolean;
+  }>({ isOpen: false, message: '', title: '', size: 'small' });
   
   // Confirm modal state
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -125,17 +125,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [hostname]);
 
   // Modal functions
-  const showModal = useCallback((message: string, title: string, logout?: boolean) => {
-    setModalConfig({ isOpen: true, message, title, logout });
+  const showModal = useCallback((props: { message: string, title: string, size?: 'small' | 'medium' | 'large', logout?: boolean }) => {
+    setModalConfig({ isOpen: true, size: 'small', ...props });
   }, []);
 
-  const showConfirm = useCallback((
+  const showConfirm = useCallback(({ message, onConfirm, title = 'Confirm Action', confirmText = 'Confirm', confirmButtonClass = 'blue-button' }: {
     message: string, 
     onConfirm: () => void, 
-    title: string = 'Confirm Action',
-    confirmText: string = 'Confirm',
-    confirmButtonClass: string = 'blue-button'
-  ) => {
+    title?: string,
+    confirmText?: string,
+    confirmButtonClass?: string
+  }) => {
     setConfirmConfig({ 
       isOpen: true, 
       message, 
@@ -151,7 +151,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const closeModal = () => {
-    setModalConfig({ isOpen: false, message: '', title: '' });
+    setModalConfig({ isOpen: false, message: '', title: '', size: 'small' });
     if (modalConfig.logout) {
       handleLogout();
     }
@@ -207,6 +207,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         isOpen={modalConfig.isOpen}
         onClose={closeModal}
         title={modalConfig.title}
+        size={modalConfig.size}
       >
         {modalConfig.message}
       </Modal>

@@ -177,7 +177,7 @@ button {
 }
 
 /* The Modal */
-.modal-background {
+/* .modal-background {
   position: fixed;
   z-index: 10;
   left: 0;
@@ -186,7 +186,7 @@ button {
   height: 100%;
   overflow: auto;
   background-color: rgba(0,0,0,0.4);
-}
+} */
 
 /* Add animation keyframes */
 @keyframes modalFadeIn {
