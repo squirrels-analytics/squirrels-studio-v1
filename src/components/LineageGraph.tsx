@@ -145,7 +145,6 @@ export default function LineageGraph({ lineageData, models, datasets, dashboards
       const model = models.find(m => m.name === name);
       setSelectedModel(model || null);
     } else if (type === 'dataset') {
-      console.log('datasets', datasets);
       const dataset = datasets.find(d => d.name === name);
       setSelectedDataset(dataset || null);
     } else if (type === 'dashboard') {
