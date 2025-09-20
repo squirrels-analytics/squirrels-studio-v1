@@ -15,7 +15,7 @@ export default function SessionTimeoutHandler({
 
   const handleLogout = () => {
     clearInterval(pollingIntervalId.current);
-    showModal("User session expired", "Session Expired", true);
+    showModal({ message: "User session expired", title: "Session Expired", logout: true });
   };
 
   // Set up polling to check authentication status

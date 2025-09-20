@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import ReactFlow, { 
   Node, 
   Edge, 
@@ -13,24 +13,38 @@ import ReactFlow, {
   Position
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { LineageNodeType, LineageType, ModelType } from '../types/DataCatalogResponse';
+import { LineageNodeType, LineageType, ModelType, DatasetType, DashboardType } from '../types/DataCatalogResponse';
 import './LineageGraph.css';
+import NodeDetailsModal from './NodeDetailsModal';
 
 interface LineageGraphProps {
   lineageData: LineageType[];
   models: ModelType[];
+  datasets: DatasetType[];
+  dashboards: DashboardType[];
+  paramSelections: Map<string, string[]>;
+  requestHeaders: Record<string, string>;
 }
 
 // Define a custom node with left and right handles
 const CustomNode = ({ data }: any) => {
+  const isModel = data.type === 'model';
+  const isDataset = data.type === 'dataset';
+  const isDashboard = data.type === 'dashboard';
+
+  const typeChipLabel = isModel ? data.modelType : isDataset ? 'Dataset' : isDashboard ? 'Dashboard' : '';
+  const showDetails = isModel || isDataset || isDashboard;
+
   return (
     <div style={{
-      padding: '10px',
-      borderRadius: '3px',
-      width: 180,
+      padding: '10px 12px',
+      borderRadius: '8px',
+      width: 240,
       background: data.backgroundColor,
-      color: 'white',
-      border: `${data.type === 'model' ? 4 : 2}px solid ${data.borderColor}`,
+      color: isModel ? '#5b2a86' : 'white',
+      border: `${isModel ? 3 : 2}px solid ${data.borderColor}`,
+      position: 'relative',
+      boxShadow: '0 2px 6px rgba(0,0,0,0.08)'
     }}>
       <Handle
         id="left"
@@ -38,7 +52,54 @@ const CustomNode = ({ data }: any) => {
         position={Position.Left}
         style={{ background: '#555' }}
       />
-      {data.label}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+          <span className="lineage-node-icon" style={{
+            background: isModel ? '#fff' : 'rgba(255,255,255,0.2)',
+            color: isModel ? data.borderColor : '#fff',
+            border: isModel ? `1px solid ${data.borderColor}` : 'none'
+          }}>{isModel ? 'M' : 'D'}</span>
+          <div style={{
+            fontWeight: 600,
+            fontSize: '13px',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            color: isModel ? '#5b2a86' : 'white'
+          }} title={data.label}>
+            {data.label}
+          </div>
+        </div>
+        {typeChipLabel && (
+          <span className="lineage-node-chip" style={{
+            backgroundColor: '#fff',
+            color: isModel ? data.borderColor : data.borderColor,
+            border: `1px solid ${data.borderColor}`
+          }}>
+            {typeChipLabel}
+          </span>
+        )}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-start', marginTop: '8px', minHeight: 24 }}>
+        {showDetails && (
+          <button
+            className="lineage-node-button"
+            onClick={(e) => {
+              e.stopPropagation();
+              if (isModel) data.onShowMetadata('model', data.label);
+              if (isDataset) data.onShowMetadata('dataset', data.label);
+              if (isDashboard) data.onShowMetadata('dashboard', data.label);
+            }}
+            style={{
+              color: isModel ? '#fff' : data.backgroundColor,
+              backgroundColor: isModel ? '#4285f4' : '#fff',
+              border: isModel ? 'none' : `1px solid ${data.backgroundColor}`
+            }}
+          >
+            Details
+          </button>
+        )}
+      </div>
       <Handle
         id="right"
         type="source"
@@ -55,10 +116,9 @@ const customNodeTypes = {
 };
 
 const nodeTypes = ['model', 'dataset', 'dashboard'];
-const modelTypes = ['source', 'seed', 'build', 'dbview', 'federate'];
 
 const nodeColors = {
-  model: '#94a3b8',     // Light gray
+  model: '#fffff2',     // White with yellow tint
   dataset: '#4285f4',   // Blue
   dashboard: '#34a853', // Green
 };
@@ -72,7 +132,36 @@ const nodeBorderColors = {
   default: '#222'       // Default border color
 };
 
-export default function LineageGraph({ lineageData, models }: LineageGraphProps) {
+export default function LineageGraph({ lineageData, models, datasets, dashboards, paramSelections, requestHeaders }: LineageGraphProps) {
+  // State for modal management
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedModel, setSelectedModel] = useState<ModelType | null>(null);
+  const [selectedDataset, setSelectedDataset] = useState<DatasetType | null>(null);
+  const [selectedDashboard, setSelectedDashboard] = useState<DashboardType | null>(null);
+
+  // Handler for opening model metadata modal
+  const handleShowMetadata = useCallback((type: string, name: string) => {
+    if (type === 'model') {
+      const model = models.find(m => m.name === name);
+      setSelectedModel(model || null);
+    } else if (type === 'dataset') {
+      const dataset = datasets.find(d => d.name === name);
+      setSelectedDataset(dataset || null);
+    } else if (type === 'dashboard') {
+      const dashboard = dashboards.find(d => d.name === name);
+      setSelectedDashboard(dashboard || null);
+    }
+    setIsModalOpen(true);
+  }, [models, datasets, dashboards]);
+
+  // Handler for closing modal
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedModel(null);
+    setSelectedDataset(null);
+    setSelectedDashboard(null);
+  };
+
   // Process lineage data to create nodes and edges
   const createNodesAndEdges = useCallback(() => {
     const initialNodes: Node[] = [];
@@ -102,7 +191,9 @@ export default function LineageGraph({ lineageData, models }: LineageGraphProps)
               label: node.name,
               type: node.type,
               backgroundColor: nodeColors[node.type as keyof typeof nodeColors] || '#666',
-              borderColor: borderColor
+              borderColor: borderColor,
+              onShowMetadata: handleShowMetadata,
+              modelType
             },
             position: { x: 0, y: 0 }, // Will be repositioned by layout
             type: 'lineageNode'
@@ -276,17 +367,17 @@ export default function LineageGraph({ lineageData, models }: LineageGraphProps)
 
     // Return the processed nodes and edges
     return { initialNodes, initialEdges };
-  }, [lineageData]);
+  }, [lineageData, models, handleShowMetadata]);
 
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
-  // Recalculate nodes and edges when lineage data changes
+  // Recalculate nodes and edges when lineage data or detail sources change
   useEffect(() => {
     const { initialNodes, initialEdges } = createNodesAndEdges();
     setNodes(initialNodes);
     setEdges(initialEdges);
-  }, [lineageData]);
+  }, [createNodesAndEdges]);
 
   return (
     <div className="lineage-graph-container">
@@ -309,23 +400,26 @@ export default function LineageGraph({ lineageData, models }: LineageGraphProps)
         </Panel>
         <Panel position="top-right">
           <div className="legend">
-            <h4>Legend</h4>
+            <div className="legend-title">Legend</div>
             <div className="legend-content">
               <div className="legend-column">
-                <div style={{ marginBottom: '10px' }}>
-                  <h5 style={{ margin: '5px 0' }}>Node Types</h5>
+                <div style={{ marginBottom: '20px' }}>
+                  <div className="legend-section-title" style={{ marginBottom: '5px' }}>Node Types</div>
                   {nodeTypes.map(type => (
                     <div key={type} className="legend-item">
                       <div 
                         className="legend-color" 
-                        style={{ backgroundColor: nodeColors[type as keyof typeof nodeColors] }}
+                        style={{ 
+                          backgroundColor: nodeColors[type as keyof typeof nodeColors],
+                          border: '1px solid black'
+                        }}
                       />
                       <div className="legend-label">{type.charAt(0).toUpperCase() + type.slice(1)}</div>
                     </div>
                   ))}
                 </div>
                 <div>
-                  <h5 style={{ margin: '5px 0' }}>Edge Types</h5>
+                  <div className="legend-section-title" style={{ marginBottom: '5px' }}>Edge Types</div>
                   <div className="legend-item">
                     <div className="legend-line">
                       <svg width="40" height="20">
@@ -387,25 +481,21 @@ export default function LineageGraph({ lineageData, models }: LineageGraphProps)
                   </div>
                 </div>
               </div>
-              <div className="legend-column">
-                <h5 style={{ margin: '5px 0' }}>Model Types</h5>
-                {modelTypes.map(type => (
-                  <div key={type} className="legend-item">
-                    <div 
-                      className="legend-color" 
-                      style={{ 
-                        backgroundColor: 'white',
-                        border: `3px solid ${nodeBorderColors[type as keyof typeof nodeBorderColors]}` 
-                      }}
-                    />
-                    <div className="legend-label">{type.charAt(0).toUpperCase() + type.slice(1)}</div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </Panel>
       </ReactFlow>
+      
+      {/* Details Modal */}
+      <NodeDetailsModal 
+        isOpen={isModalOpen} 
+        onClose={handleCloseModal} 
+        selectedModel={selectedModel} 
+        selectedDataset={selectedDataset} 
+        selectedDashboard={selectedDashboard}
+        paramSelections={paramSelections}
+        requestHeaders={requestHeaders}
+      />
     </div>
   );
 } 

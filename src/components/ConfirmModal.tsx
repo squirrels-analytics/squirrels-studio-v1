@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import './Modal.css';
 
 interface ConfirmModalProps {
@@ -24,9 +25,9 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  return (
+  const content = (
     <div className="modal-overlay" onMouseDown={onCancel}>
-      <div className="modal-content" onMouseDown={e => e.stopPropagation()}>
+      <div className="modal-content" style={{ maxWidth: '360px' }} onMouseDown={e => e.stopPropagation()}>
         {title && <div className="modal-header">{title}</div>}
         <div className="modal-body">{message}</div>
         <div className="modal-footer">
@@ -36,6 +37,8 @@ const ConfirmModal: React.FC<ConfirmModalProps> = ({
       </div>
     </div>
   );
+
+  return createPortal(content, document.body);
 };
 
 export default ConfirmModal; 

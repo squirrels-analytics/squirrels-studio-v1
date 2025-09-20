@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../Router';
-import { FaKey, FaLock, FaTrash, FaPlus, FaInfinity, FaCopy, FaExclamationTriangle } from 'react-icons/fa';
+import { FaKey, FaLock, FaTrash, FaPlus, FaInfinity, FaCopy } from 'react-icons/fa';
 import './UserSettingsPage.css';
 import { AUTH_PATH } from '../utils';
+import Modal from '../components/Modal';
 
 
 interface ApiKey {
@@ -64,7 +65,7 @@ export default function UserSettingsPage() {
         const data = await response.json();
         setApiKeys(data);
       } else if (response.status === 401) {
-        showModal('Your session has expired. Please log in again.', 'Session Expired', true);
+        showModal({ message: 'Your session has expired. Please log in again.', title: 'Session Expired', logout: true });
       } else {
         setError('Failed to fetch API Keys');
       }
@@ -132,15 +133,17 @@ export default function UserSettingsPage() {
           setApiKeyCopied(true);
         })
         .catch(() => {
-          showModal('Failed to copy API Key to clipboard', 'Error');
+          showModal({ message: 'Failed to copy API Key to clipboard', title: 'Error' });
         });
     }
   };
 
   const closeApiKeyModal = () => {
-    setShowApiKeyModal(false);
-    setNewApiKey(null);
-    setSuccessMessage('API Key created successfully');
+    if (apiKeyCopied) {
+      setShowApiKeyModal(false);
+      setNewApiKey(null);
+      setSuccessMessage('API Key created successfully');
+    }
   };
 
   const handleDeleteApiKey = async (apiKeyId: string) => {
@@ -169,13 +172,13 @@ export default function UserSettingsPage() {
       }
     };
 
-    showConfirm(
-      'Are you sure you want to delete this API Key? This action cannot be undone.',
-      performDelete,
-      'Delete API Key',
-      'Delete',
-      'red-button'
-    );
+    showConfirm({
+      message: 'Are you sure you want to delete this API Key? This action cannot be undone.',
+      onConfirm: performDelete,
+      title: 'Delete API Key',
+      confirmText: 'Delete',
+      confirmButtonClass: 'red-button'
+    });
   };
 
   const handlePasswordChange = async (e: React.FormEvent) => {
@@ -191,7 +194,7 @@ export default function UserSettingsPage() {
     setSuccessMessage('');
 
     try {
-      const response = await fetch(`${hostname}${AUTH_PATH}/change-password`, {
+      const response = await fetch(`${hostname}${AUTH_PATH}/password`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
@@ -410,34 +413,11 @@ export default function UserSettingsPage() {
 
       {/* API Key Modal */}
       {showApiKeyModal && newApiKey && (
-        <div className="modal-background">
-          <div className="modal-content api-key-modal">
-            <div className="api-key-modal-header">
-              <FaExclamationTriangle className="warning-icon" />
-              <h2>Important: Save Your New API Key</h2>
-            </div>
-            
-            <p className="api-key-modal-message">
-              This API Key will only be displayed once. Please copy it now and store it securely.
-            </p>
-            
-            <div className="api-key-display">
-              <code>{newApiKey}</code>
-              <button 
-                className="copy-button"
-                onClick={handleCopyApiKey}
-                title="Copy API Key to Clipboard"
-              >
-                <FaCopy />
-              </button>
-            </div>
-            
-            {apiKeyCopied && (
-              <div className="api-key-copied-message">
-                API Key copied to clipboard!
-              </div>
-            )}
-            
+        <Modal 
+          isOpen={showApiKeyModal}
+          onClose={closeApiKeyModal}
+          title="IMPORTANT: Save Your New API Key!"
+          footer={(
             <div className="api-key-modal-actions">
               <button 
                 className="blue-button"
@@ -447,8 +427,29 @@ export default function UserSettingsPage() {
                 I've saved my API Key
               </button>
             </div>
+          )}
+        >
+          <p className="api-key-modal-message">
+            This API Key will only be displayed once. Please copy it now and store it securely.
+          </p>
+          
+          <div className="api-key-display">
+            <code>{newApiKey}</code>
+            <button 
+              className="copy-button"
+              onClick={handleCopyApiKey}
+              title="Copy API Key to Clipboard"
+            >
+              <FaCopy />
+            </button>
           </div>
-        </div>
+          
+          {apiKeyCopied && (
+            <div className="api-key-copied-message">
+              API Key copied to clipboard!
+            </div>
+          )}
+        </Modal>
       )}
     </div>
   );

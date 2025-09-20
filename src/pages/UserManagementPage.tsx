@@ -5,6 +5,7 @@ import { FaUserPlus, FaTrash, FaArrowLeft, FaEdit } from 'react-icons/fa';
 import { User, UserField } from '../types/UserManagement';
 import './UserManagementPage.css';
 import { AUTH_PATH } from '../utils';
+import Modal from '../components/Modal';
 
 
 export default function UserManagementPage() {
@@ -54,7 +55,7 @@ export default function UserManagementPage() {
         const data = await response.json();
         setUsers(data);
       } else if (response.status === 401) {
-        showModal('Your session has expired. Please log in again.', 'Session Expired', true);
+        showModal({ message: 'Your session has expired. Please log in again.', title: 'Session Expired', logout: true });
       } else {
         setError('Failed to fetch users');
       }
@@ -163,13 +164,13 @@ export default function UserManagementPage() {
       }
     };
 
-    showConfirm(
-      `Are you sure you want to delete user "${username}"? This action cannot be undone.`,
-      performDelete,
-      'Delete User',
-      'Delete',
-      'red-button'
-    );
+    showConfirm({
+      message: `Are you sure you want to delete user "${username}"? This action cannot be undone.`,
+      onConfirm: performDelete,
+      title: 'Delete User',
+      confirmText: 'Delete',
+      confirmButtonClass: 'red-button'
+    });
   };
 
   const handleInputChange = (name: string, value: any, switchOffNull: boolean = false) => {
@@ -330,11 +331,19 @@ export default function UserManagementPage() {
       </div>
 
       {showCreateModal && (
-        <div className="modal-background" onMouseDown={() => setShowCreateModal(false)}>
-          <div className="modal-content user-modal" onMouseDown={e => e.stopPropagation()}>
-            <h2>Create New User</h2>
-            <form onSubmit={handleCreateUser}>
-              <div className="scrollable-form">
+        <Modal 
+          isOpen={showCreateModal} 
+          onClose={() => setShowCreateModal(false)} 
+          title="Create New User"
+          footer={(
+            <>
+              <button type="submit" form="create-user-form" className="blue-button">Create User</button>
+              <button type="button" className="white-button" onClick={() => setShowCreateModal(false)}>Cancel</button>
+            </>
+          )}
+        >
+          <form id="create-user-form" onSubmit={handleCreateUser}>
+            <div className="scrollable-form">
                 <div className="form-group">
                   <label htmlFor="username">Username / Email</label>
                   <input
@@ -442,23 +451,25 @@ export default function UserManagementPage() {
                     </div>
                   )
                 ))}
-              </div>
-
-              <div className="modal-actions">
-                <button type="submit" className="blue-button">Create User</button>
-                <button type="button" className="white-button" onClick={() => setShowCreateModal(false)}>Cancel</button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </div>
+          </form>
+        </Modal>
       )}
 
       {showEditModal && (
-        <div className="modal-background" onMouseDown={() => setShowEditModal(false)}>
-          <div className="modal-content user-modal" onMouseDown={e => e.stopPropagation()}>
-            <h2>Edit User</h2>
-            <form onSubmit={handleUpdateUser}>
-              <div className="scrollable-form">
+        <Modal 
+          isOpen={showEditModal} 
+          onClose={() => setShowEditModal(false)} 
+          title="Edit User"
+          footer={(
+            <>
+              <button type="submit" form="edit-user-form" className="blue-button">Update User</button>
+              <button type="button" className="white-button" onClick={() => setShowEditModal(false)}>Cancel</button>
+            </>
+          )}
+        >
+          <form id="edit-user-form" onSubmit={handleUpdateUser}>
+            <div className="scrollable-form">
                 <div className="form-group">
                   <label htmlFor="edit-username">Username / Email</label>
                   <input
@@ -544,15 +555,9 @@ export default function UserManagementPage() {
                     </div>
                   )
                 ))}
-              </div>
-
-              <div className="modal-actions">
-                <button type="submit" className="blue-button">Update User</button>
-                <button type="button" className="white-button" onClick={() => setShowEditModal(false)}>Cancel</button>
-              </div>
-            </form>
-          </div>
-        </div>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );
