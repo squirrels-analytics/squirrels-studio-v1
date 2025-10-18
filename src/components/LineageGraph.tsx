@@ -13,7 +13,7 @@ import ReactFlow, {
   Position
 } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { LineageNodeType, LineageType, ModelType, DatasetType, DashboardType } from '../types/DataCatalogResponse';
+import { LineageNodeType, LineageType, ModelType, DatasetType, DashboardType, ConnectionType } from '../types/DataCatalogResponse';
 import './LineageGraph.css';
 import NodeDetailsModal from './NodeDetailsModal';
 
@@ -22,6 +22,7 @@ interface LineageGraphProps {
   models: ModelType[];
   datasets: DatasetType[];
   dashboards: DashboardType[];
+  connections: ConnectionType[];
   paramSelections: Map<string, string[]>;
   requestHeaders: Record<string, string>;
 }
@@ -132,7 +133,7 @@ const nodeBorderColors = {
   default: '#222'       // Default border color
 };
 
-export default function LineageGraph({ lineageData, models, datasets, dashboards, paramSelections, requestHeaders }: LineageGraphProps) {
+export default function LineageGraph({ lineageData, models, datasets, dashboards, connections, paramSelections, requestHeaders }: LineageGraphProps) {
   // State for modal management
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedModel, setSelectedModel] = useState<ModelType | null>(null);
@@ -493,6 +494,7 @@ export default function LineageGraph({ lineageData, models, datasets, dashboards
         selectedModel={selectedModel} 
         selectedDataset={selectedDataset} 
         selectedDashboard={selectedDashboard}
+        connections={connections}
         paramSelections={paramSelections}
         requestHeaders={requestHeaders}
       />

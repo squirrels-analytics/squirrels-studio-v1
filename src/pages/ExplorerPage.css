@@ -73,30 +73,6 @@
   padding: 6px 10px;
 }
 
-.resize-handle {
-    height: 10px;
-    background-color: #f0f0f0;
-    cursor: ns-resize;
-    border-top: 1px solid #ccc;
-    border-bottom: 1px solid #ccc;
-    position: relative;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.resize-handle::after {
-    content: "";
-    height: 4px;
-    width: 40px;
-    background-color: #ddd;
-    border-radius: 2px;
-}
-
-.resize-handle:hover::after {
-    background-color: #999;
-}
-
 .table-container {
   background-color: var(--surface);
   border-radius: var(--radius-md);
@@ -147,8 +123,9 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  border-bottom: 1px solid #ccc;
   padding-bottom: 1rem;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid #ddd;
 }
 
 .sql-editor-label {
@@ -159,26 +136,32 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-shrink: 0;
 }
 
 .sql-editor {
-  flex: 1;
   border: 1px solid #ddd;
   border-radius: 4px;
-  margin-bottom: 10px;
-  overflow: hidden;
+  overflow: auto;
+  resize: vertical;
+  min-height: 100px;
+  max-height: 300px;
+  height: 100px;
 }
 
 .sql-editor-actions {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
+  margin-top: 10px;
+  flex-shrink: 0;
 }
 
 /* Override some CodeMirror default styles to match our app theme */
 .sql-editor .cm-editor {
   height: 100%;
   font-size: 14px;
+  border: none;
 }
 
 .sql-editor .cm-scroller {

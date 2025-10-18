@@ -29,7 +29,7 @@ export default function UserManagementPage() {
   const [newUserData, setNewUserData] = useState<Record<string, any>>({
     username: '',
     password: '',
-    is_admin: false
+    access_level: 'member'
   });
   const [editUserData, setEditUserData] = useState<Record<string, any>>({});
 
@@ -75,14 +75,14 @@ export default function UserManagementPage() {
 
       if (response.status === 200) {
         const data: UserField[] = await response.json();
-        const customFields = data.filter(field => !['username', 'password', 'is_admin'].includes(field.name));
+        const customFields = data.filter(field => !['username', 'password', 'access_level'].includes(field.name));
         setUserFields(customFields);
         
         // Initialize newUserData with default values
         const defaultData: Record<string, any> = {
           username: '',
           password: '',
-          is_admin: false
+          access_level: 'member'
         };
         customFields.forEach(field => {
           defaultData[field.name] = field.default;
@@ -119,7 +119,7 @@ export default function UserManagementPage() {
         const defaultData: Record<string, any> = {
           username: '',
           password: '',
-          is_admin: false
+          access_level: 'member'
         };
         userFields.forEach(field => {
           defaultData[field.name] = field.default;
@@ -202,7 +202,7 @@ export default function UserManagementPage() {
     // Initialize edit form with user data
     const userData: Record<string, any> = {
       username: user.username,
-      is_admin: user.is_admin
+      access_level: user.access_level
     };
     
     // Add custom fields
@@ -288,7 +288,7 @@ export default function UserManagementPage() {
               <thead>
                 <tr>
                   <th>Username / Email</th>
-                  <th>Admin</th>
+                  <th>Access Level</th>
                   {userFields.map(field => (
                     <th key={field.name}>{field.name}</th>
                   ))}
@@ -299,7 +299,7 @@ export default function UserManagementPage() {
                 {users.map(user => (
                   <tr key={user.username}>
                     <td>{user.username}</td>
-                    <td>{user.is_admin ? 'Yes' : 'No'}</td>
+                    <td>{user.access_level === 'admin' ? 'Admin' : 'Member'}</td>
                     {userFields.map(field => (
                       <td key={field.name}>{user[field.name]?.toString() || ''}</td>
                     ))}
@@ -379,14 +379,16 @@ export default function UserManagementPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={newUserData.is_admin}
-                      onChange={(e) => handleInputChange('is_admin', e.target.checked)}
-                    />
-                    <span>Admin User</span>
-                  </label>
+                  <label htmlFor="access_level">Access Level</label>
+                  <select
+                    id="access_level"
+                    className="widget padded"
+                    value={newUserData.access_level}
+                    onChange={(e) => handleInputChange('access_level', e.target.value)}
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
                 </div>
 
                 {userFields.map(field => (
@@ -482,15 +484,17 @@ export default function UserManagementPage() {
                 </div>
 
                 <div className="form-group">
-                  <label className="checkbox-label">
-                    <input
-                      type="checkbox"
-                      checked={editUserData.is_admin}
-                      onChange={(e) => setEditUserData({...editUserData, is_admin: e.target.checked})}
-                      disabled={editUserData.username === "admin"}
-                    />
-                    Admin User
-                  </label>
+                  <label htmlFor="edit-access_level">Access Level</label>
+                  <select
+                    id="edit-access_level"
+                    className="widget padded"
+                    value={editUserData.access_level}
+                    onChange={(e) => setEditUserData({...editUserData, access_level: e.target.value})}
+                    disabled={editUserData.username === "admin"}
+                  >
+                    <option value="member">Member</option>
+                    <option value="admin">Admin</option>
+                  </select>
                 </div>
 
                 {userFields.map(field => (

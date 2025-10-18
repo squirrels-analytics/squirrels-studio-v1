@@ -8,7 +8,7 @@ export interface UserField {
 
 export interface User {
   username: string;
-  is_admin: boolean;
+  access_level: "admin" | "member";
   [key: string]: any;  // For additional dynamic fields
 }
 

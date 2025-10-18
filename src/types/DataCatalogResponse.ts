@@ -41,7 +41,7 @@ export interface ModelType {
   config: {
     description: string;
     columns: ColumnType[];
-    load_to_duckdb?: boolean;
+    load_to_vdl?: boolean;
     connection?: string;
     table?: string;
   },

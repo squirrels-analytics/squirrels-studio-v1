@@ -136,14 +136,14 @@ export default function ExplorerPage() {
       if (response.status === 200) {
         const data = await response.json();
         setUserProps({
-        username: data.username,
-        isAdmin: data.is_admin
+          username: data.username,
+          isAdmin: data.access_level === 'admin'
         });
       } else if (response.status === 401) {
         // Not authenticated, clear user props
         setUserProps({
-        username: '',
-        isAdmin: false
+          username: '',
+          isAdmin: false
         });
       }
       } catch (error) {
@@ -185,10 +185,6 @@ export default function ExplorerPage() {
   const [dataMode, toggleDataMode] = useState<DataTypeType>("dataset");
   const [configurables, setConfigurables] = useState<ConfigurablesType[]>([]);
   const [configValues, setConfigValues] = useState<Record<string, string>>({});
-
-  const [explorerHeight, setExplorerHeight] = useState(150);
-  const resizeStartPosition = useRef(0);
-  const isResizing = useRef(false);
 
   const [sqlQuery, setSqlQuery] = useState<string>('');
   const editorRef = useRef<any>(null);
@@ -559,35 +555,6 @@ export default function ExplorerPage() {
   ) : null;
 
   const paramSelections = useRef(new Map<string, string[]>());
-  
-  const handleResizeMouseDown = (e: React.MouseEvent) => {
-    isResizing.current = true;
-    resizeStartPosition.current = e.clientY;
-    document.addEventListener('mousemove', handleResizeMouseMove);
-    document.addEventListener('mouseup', handleResizeMouseUp);
-    e.preventDefault();
-  };
-
-  const handleResizeMouseMove = (e: MouseEvent) => {
-    if (!isResizing.current) return;
-    const delta = e.clientY - resizeStartPosition.current;
-    setExplorerHeight(prev => Math.max(100, Math.min(window.innerHeight - 200, prev + delta)));
-    resizeStartPosition.current = e.clientY;
-  };
-
-  const handleResizeMouseUp = () => {
-    isResizing.current = false;
-    document.removeEventListener('mousemove', handleResizeMouseMove);
-    document.removeEventListener('mouseup', handleResizeMouseUp);
-  };
-
-  // Clean up event listeners on unmount
-  useEffect(() => {
-    return () => {
-      document.removeEventListener('mousemove', handleResizeMouseMove);
-      document.removeEventListener('mouseup', handleResizeMouseUp);
-    };
-  }, []);
 
   const handleExplorerWidthChange = (newWidth: number) => {
     setExplorerWidth(Math.max(200, Math.min(450, newWidth)));
@@ -600,7 +567,7 @@ export default function ExplorerPage() {
       if (!word || word.from === word.to && !context.explicit) return null;
       
       // Generate completions for all model names
-      const queryableModels = models.filter(model => model.model_type !== "source" || model.config.load_to_duckdb);
+      const queryableModels = models.filter(model => model.is_queryable);
       return {
         from: word.from,
         options: queryableModels.map(model => ({
@@ -711,13 +678,13 @@ export default function ExplorerPage() {
                   onWidthChange={handleExplorerWidthChange}
                 />
                 <div className="model-view-content" style={{ width: `calc(100% - ${explorerWidth}px)` }}>
-                  <div className="sql-editor-container" style={{ height: `${explorerHeight}px` }}>
+                  <div className="sql-editor-container">
                     <div className="sql-editor-label">
                       SQL Query Editor
                     </div>
                     <CodeMirror
                       value={sqlQuery}
-                      height="calc(100% - 50px)"
+                      height="100%"
                       onChange={(value) => setSqlQuery(value)}
                       extensions={[
                         sql(),
@@ -736,7 +703,7 @@ export default function ExplorerPage() {
                         highlightSelectionMatches: true,
                         tabSize: 2,
                       }}
-                      placeholder="Write your SQL query here... (Press Ctrl+Enter to run)"
+                      placeholder="Write your SQL query here... (Ctrl+Enter to run)"
                       className="sql-editor"
                       onCreateEditor={(editor) => {
                         editorRef.current = editor;
@@ -759,15 +726,10 @@ export default function ExplorerPage() {
                       </button>
                     </div>
                   </div>
-                  <div 
-                    className="resize-handle"
-                    onMouseDown={handleResizeMouseDown}
-                  ></div>
                   <ResultTable 
                     tableDataObj={resultContent} 
                     outputFormat={OutputFormatEnum.TABLE} 
                     paginationContainer={paginationContainer}
-                    tableContentStyle={{ height: `calc(100% - ${explorerHeight}px - 10px)` }}
                   />
                 </div>
               </div>
@@ -779,6 +741,7 @@ export default function ExplorerPage() {
                 models={models} 
                 datasets={datasets}
                 dashboards={dashboards}
+                connections={connections}
                 paramSelections={paramSelections.current}
                 requestHeaders={requestHeaders}
               />

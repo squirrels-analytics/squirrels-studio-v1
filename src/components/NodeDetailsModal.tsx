@@ -2,22 +2,26 @@ import { useEffect, useMemo, useState } from "react";
 import { ModelType } from "../types/DataCatalogResponse";
 import { DatasetType } from "../types/DataCatalogResponse";
 import { DashboardType } from "../types/DataCatalogResponse";
+import { ConnectionType } from "../types/DataCatalogResponse";
 import Modal from "./Modal";
 import "./NodeDetailsModal.css";
 import { useApp } from "../Router";
 import { CompiledModelResponse } from "../types/CompiledModelResponse";
 
-export default function NodeDetailsModal({ isOpen, onClose, selectedModel, selectedDataset, selectedDashboard, paramSelections, requestHeaders }: { 
+export default function NodeDetailsModal({ isOpen, onClose, selectedModel, selectedDataset, selectedDashboard, connections, paramSelections, requestHeaders }: { 
   isOpen: boolean, 
   onClose: () => void, 
   selectedModel: ModelType | null, 
   selectedDataset: DatasetType | null, 
   selectedDashboard: DashboardType | null,
+  connections: ConnectionType[],
   paramSelections: Map<string, string[]>,
   requestHeaders: Record<string, string>
 }) {
   const { hostname, projectMetadataPath, showModal, userProps } = useApp();
   
+  // Create a map of connection names to their labels
+  const connectionMap = Object.fromEntries(connections.map(conn => [conn.name, conn.label]));
   const [compiledModel, setCompiledModel] = useState<CompiledModelResponse | null>(null);
   const [isLoadingCompiled, setIsLoadingCompiled] = useState<boolean>(false);
 
@@ -117,7 +121,7 @@ export default function NodeDetailsModal({ isOpen, onClose, selectedModel, selec
           {model.config.connection && (
             <div className="metadata-row">
               <div className="metadata-title">Connection</div>
-              <div className="metadata-value">{model.config.connection}</div>
+              <div className="metadata-value">{connectionMap[model.config.connection] || model.config.connection}</div>
             </div>
           )}
           {model.config.table && (
@@ -126,10 +130,10 @@ export default function NodeDetailsModal({ isOpen, onClose, selectedModel, selec
               <div className="metadata-value">{model.config.table}</div>
             </div>
           )}
-          {model.config.load_to_duckdb !== undefined && (
+          {model.config.load_to_vdl !== undefined && (
             <div className="metadata-row">
-              <div className="metadata-title">Load to DuckDB</div>
-              <div className="metadata-value">{model.config.load_to_duckdb ? 'Yes' : 'No'}</div>
+              <div className="metadata-title">In Virtual Data Lake?</div>
+              <div className="metadata-value">{model.config.load_to_vdl ? 'Yes' : 'No'}</div>
             </div>
           )}
         </div>
@@ -162,32 +166,34 @@ export default function NodeDetailsModal({ isOpen, onClose, selectedModel, selec
           </div>
         </div>
 
-        <div className="">
-          <div className="definition-header" style={{ marginTop: '8px' }}>
-            <div className="metadata-title" style={{ margin: 0 }}>
-              Compiled Definition {compiledModel?.language && <span className="lang-chip">{compiledModel.language}</span>}
+        {(model.model_type !== 'seed' && model.model_type !== 'source') && (
+          <div className="">
+            <div className="definition-header" style={{ marginTop: '8px' }}>
+              <div className="metadata-title" style={{ margin: 0 }}>
+                Compiled Definition {compiledModel?.language && <span className="lang-chip">{compiledModel.language}</span>}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button 
+                  className="white-button" 
+                  onClick={handleCopyDefinition}
+                  disabled={isLoadingCompiled || !compiledModel?.definition}
+                >
+                  Copy
+                </button>
+              </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <button 
-                className="white-button" 
-                onClick={handleCopyDefinition}
-                disabled={isLoadingCompiled || !compiledModel?.definition}
-              >
-                Copy
-              </button>
-            </div>
-          </div>
-          <pre className="code-block">
-            {isLoadingCompiled ? 'Loading…' : (compiledModel?.definition || '—')}
-          </pre>
+            <pre className="code-block">
+              {isLoadingCompiled ? 'Loading…' : (compiledModel?.definition || '—')}
+            </pre>
 
-          <div className="metadata-title">Compiled Placeholders</div>
-          {isLoadingCompiled ? (
-            <div className="metadata-value">Loading…</div>
-          ) : (
-            <pre className="code-block">{compiledModel ? JSON.stringify(compiledModel.placeholders) : '—'}</pre>
-          )}
-        </div>
+            <div className="metadata-title">Compiled Placeholders</div>
+            {isLoadingCompiled ? (
+              <div className="metadata-value">Loading…</div>
+            ) : (
+              <pre className="code-block">{compiledModel ? JSON.stringify(compiledModel.placeholders) : '—'}</pre>
+            )}
+          </div>
+        )}
       </div>
     );
   };
