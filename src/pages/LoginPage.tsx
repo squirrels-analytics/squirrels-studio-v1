@@ -25,7 +25,8 @@ export default function LoginPage() {
   });
 
   const targetRedirectPath = `/explorer${location.search || ''}`;
-  const redirectUrl = `${window.location.origin}/squirrels-studio-v1/#${targetRedirectPath}`;
+  const squirrelsStudioUrl = window.location.href.split('#')[0];
+  const redirectUrl = `${squirrelsStudioUrl}#${targetRedirectPath}`;
 
   useEffect(() => {
     if (!projectMetadataPath) {
