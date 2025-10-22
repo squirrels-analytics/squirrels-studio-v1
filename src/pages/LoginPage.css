@@ -28,6 +28,45 @@
   text-align: center;
 }
 
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0.25rem;
+  background-color: var(--background);
+  padding: 0.25rem;
+  border-radius: var(--radius-sm);
+  margin-bottom: 2rem;
+}
+
+.tab {
+  flex: 1 1 0;
+  text-align: center;
+  background: transparent;
+  border: 1px solid transparent;
+}
+
+.tab.active {
+  background-color: var(--surface);
+  border-color: var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.resources-panel {
+  margin-bottom: 1rem;
+  background-color: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.section-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 0.5rem 0;
+}
+
 .form-group {
   margin-bottom: 1.5rem;
 }
@@ -82,13 +121,36 @@
 .api-docs-buttons {
   display: flex;
   justify-content: center;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
+  flex-wrap: wrap; /* allow wrapping on small widths */
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+/* Make each item in the group take equal space and wrap nicely */
+.api-docs-buttons > a,
+.api-docs-buttons > button {
+  flex: 1 1 140px; /* minimum width before wrapping */
 }
 
 .api-docs-buttons button {
   width: 100%;
   white-space: nowrap;
+}
+
+/* MCP input with copy icon */
+.mcp-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.mcp-input {
+  flex: 1;
+}
+
+.icon-button {
+  padding: 0.5rem 0.75rem;
+  min-width: 44px;
 }
 
 .project-header {

@@ -19,6 +19,8 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [providers, setProviders] = useState<Provider[]>([]);
+  const [copiedMcp, setCopiedMcp] = useState(false);
+  const [activeTab, setActiveTab] = useState<'signin' | 'actions'>('signin');
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -60,6 +62,18 @@ export default function LoginPage() {
 
   const handleGuestAccess = () => {
     navigate(targetRedirectPath);
+  };
+
+  const handleCopyMcpUrl = async () => {
+    const effectiveHost = hostname || window.location.origin;
+    const mcpUrl = `${effectiveHost}${projectMetadataPath}/mcp`;
+    try {
+      await navigator.clipboard.writeText(mcpUrl);
+      setCopiedMcp(true);
+      setTimeout(() => setCopiedMcp(false), 1000);
+    } catch (error) {
+      console.error('Failed to copy MCP URL:', error);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -111,62 +125,102 @@ export default function LoginPage() {
             ✏️
           </button>
         </div>
-        <div style={{ textAlign: 'center' }}>
-          <div className="api-docs-buttons">
-            <a href={`${hostname}${projectMetadataPath}/redoc`} target="_blank" rel="noopener noreferrer">
-              <button className="blue-button">
-                <span>ReDoc API Docs</span>
-              </button>
-            </a>
-            <a href={`${hostname}${projectMetadataPath}/docs`} target="_blank" rel="noopener noreferrer">
-              <button className="white-button">
-                <span>Swagger API Docs</span>
-              </button>
-            </a>
-          </div>
+        {/* Tabs */}
+        <div className="tabs">
+          <button
+            className={`tab ${activeTab === 'signin' ? 'active' : ''}`}
+            onClick={() => setActiveTab('signin')}
+          >
+            Sign In
+          </button>
+          <button
+            className={`tab ${activeTab === 'actions' ? 'active' : ''}`}
+            onClick={() => setActiveTab('actions')}
+          >
+            Resources
+          </button>
         </div>
+
+        {activeTab === 'actions' && (
+          <div className="resources-panel">
+            <div className="section-title">API Documentation</div>
+            <div className="api-docs-buttons">
+              <a href={`${hostname}${projectMetadataPath}/redoc`} target="_blank" rel="noopener noreferrer">
+                <button className="white-button">
+                  <span>ReDoc API Docs</span>
+                </button>
+              </a>
+              <a href={`${hostname}${projectMetadataPath}/docs`} target="_blank" rel="noopener noreferrer">
+                <button className="blue-button">
+                  <span>Swagger API Docs</span>
+                </button>
+              </a>
+            </div>
+            <div className="section-title" style={{ marginTop: '0.75rem' }}>MCP URL</div>
+            <div className="mcp-input-group">
+              <input
+                type="text"
+                className="widget padded mcp-input"
+                readOnly
+                value={`${(hostname || window.location.origin)}${projectMetadataPath}/mcp`}
+              />
+              <button
+                type="button"
+                className="white-button icon-button"
+                title={copiedMcp ? 'Copied!' : 'Copy MCP URL'}
+                onClick={handleCopyMcpUrl}
+              >
+                {copiedMcp ? '✓' : '📋'}
+              </button>
+            </div>
+          </div>
+        )}
         
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label htmlFor="username">Username</label>
-            <input
-              type="text"
-              id="username"
-              name="username"
-              className="widget padded"
-              value={formData.username}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              type="password"
-              id="password"
-              name="password"
-              className="widget padded"
-              value={formData.password}
-              onChange={handleInputChange}
-              required
-            />
-          </div>
-          
-          {error && <div className="error-message">{error}</div>}
-        
-          <div className="button-container">
-            <button type="submit" className="blue-button login-button" disabled={isLoading}>
-              Login
-            </button>
-          </div>
-        </form>
+        {activeTab === 'signin' && (
+          <form onSubmit={handleSubmit}>
+            <div className="form-group">
+              <label htmlFor="username">Username</label>
+              <input
+                type="text"
+                id="username"
+                name="username"
+                className="widget padded"
+                value={formData.username}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
             
-        <div className="or-divider">
-          <span>or</span>
-        </div>
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                className="widget padded"
+                value={formData.password}
+                onChange={handleInputChange}
+                required
+              />
+            </div>
+            
+            {error && <div className="error-message">{error}</div>}
+          
+            <div className="button-container">
+              <button type="submit" className="blue-button login-button" disabled={isLoading}>
+                Login
+              </button>
+            </div>
+          </form>
+        )}
         
-        {providers.map((provider) => (
+        {activeTab === 'signin' && (
+          <div className="or-divider">
+            <span>or</span>
+          </div>
+        )}
+
+        {activeTab === 'signin' && providers.map((provider) => (
           <form key={provider.name} method="get" action={provider.login_url}>
             <input type="hidden" name="redirect_url" value={redirectUrl} /> 
             <button
@@ -187,14 +241,16 @@ export default function LoginPage() {
           </form>
         ))}
 
-        <button 
-          type="button" 
-          className="white-button guest-button" 
-          onClick={handleGuestAccess}
-          disabled={isLoading}
-        >
-          Explore as Guest
-        </button>
+        {activeTab === 'signin' && (
+          <button 
+            type="button" 
+            className="white-button guest-button" 
+            onClick={handleGuestAccess}
+            disabled={isLoading}
+          >
+            Explore as Guest
+          </button>
+        )}
       </div>
       
       <LoadingSpinner isLoading={isLoading} />
