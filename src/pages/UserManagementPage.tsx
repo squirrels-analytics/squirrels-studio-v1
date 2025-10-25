@@ -299,7 +299,7 @@ export default function UserManagementPage() {
                 {users.map(user => (
                   <tr key={user.username}>
                     <td>{user.username}</td>
-                    <td>{user.access_level === 'admin' ? 'Admin' : 'Member'}</td>
+                    <td>{user.access_level === "admin" ? 'Admin' : 'Member'}</td>
                     {userFields.map(field => (
                       <td key={field.name}>{user[field.name]?.toString() || ''}</td>
                     ))}

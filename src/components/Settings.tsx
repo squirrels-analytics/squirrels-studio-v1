@@ -12,7 +12,6 @@ interface SettingsProps {
   setParamData: (x: ParameterType[] | null) => void;
   clearTableData: () => void;
   setOutputFormat: (x: OutputFormatEnum) => void;
-  isAdmin: boolean;
   dataMode: DataTypeType;
   datasets: DatasetType[];
   dashboards: DashboardType[];
@@ -23,11 +22,13 @@ interface SettingsProps {
   setConfigurables: (x: ConfigurablesType[]) => void;
   setDatasets: (x: DatasetType[]) => void;
   setDashboards: (x: DashboardType[]) => void;
+  hasElevatedAccess: boolean;
 }
 
 export default function Settings({ 
-  projectMetadataPath, parametersURL, resultsURL, fetchJson, setParamData, clearTableData, setOutputFormat, isAdmin, 
-  dataMode, datasets, dashboards, toggleDataMode, setModels, setConnections, setLineageData, setConfigurables, setDatasets, setDashboards
+  projectMetadataPath, parametersURL, resultsURL, fetchJson, setParamData, clearTableData, setOutputFormat,
+  dataMode, datasets, dashboards, toggleDataMode, setModels, setConnections, setLineageData, setConfigurables, 
+  setDatasets, setDashboards, hasElevatedAccess
 }: SettingsProps) {
 
   const [dataObj, setDataObj] = useState<DataObjectType | null>(null);
@@ -128,8 +129,8 @@ export default function Settings({
         >
           <option value="dataset">Datasets</option>
           <option value="dashboard">Dashboards</option>
-          {isAdmin && <option value="model">Data Models</option>}
-          {isAdmin && <option value="lineage">Data Lineage</option>}
+          {hasElevatedAccess && <option value="model">Data Models</option>}
+          {hasElevatedAccess && <option value="lineage">Data Lineage</option>}
         </select>
       </div>
       {dataMode !== "model" && dataMode !== "lineage" && (

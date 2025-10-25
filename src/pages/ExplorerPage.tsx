@@ -137,7 +137,7 @@ export default function ExplorerPage() {
         const data = await response.json();
         setUserProps({
           username: data.username,
-          isAdmin: data.access_level === 'admin'
+          isAdmin: data.access_level === "admin"
         });
       } else if (response.status === 401) {
         // Not authenticated, clear user props
@@ -613,7 +613,6 @@ export default function ExplorerPage() {
               setParamData={setParamData}
               clearTableData={clearTableData}
               setOutputFormat={setOutputFormat}
-              isAdmin={isAdmin}
               dataMode={dataMode}
               datasets={datasets}
               dashboards={dashboards}
@@ -628,6 +627,12 @@ export default function ExplorerPage() {
               setConfigurables={setConfigurables}
               setDatasets={setDatasets}
               setDashboards={setDashboards}
+              hasElevatedAccess={(() => {
+                const level = projectMetadata?.elevated_access_level;
+                if (level === "guest") return true; // everyone has access
+                if (level === "member") return !!username; // any authenticated user
+                return isAdmin; // only admins have elevated access
+              })()}
             />
             <br/><hr/><br/>
             <ParametersContainer 

@@ -45,14 +45,18 @@ export default function RootPage() {
     setIsLoading(true);
     
     try {
-      if (!formData.hostname.startsWith('http://') && !formData.hostname.startsWith('https://')) {
+      const hostname = formData.hostname.trim();
+      const projectName = formData.projectName.trim().replace(/_/g, '-');
+      const projectVersion = formData.projectVersion.trim();
+
+      if (!hostname.startsWith('http://') && !hostname.startsWith('https://')) {
         throw new Error('Host URL must start with http:// or https://');
       }
-      const projectMetadataPath = getProjectMetadataPath(formData.projectName, formData.projectVersion);
+      const projectMetadataPath = getProjectMetadataPath(projectName, projectVersion);
       if (!projectMetadataPath) {
         throw new Error('Project name and version are required');
       }
-      const response = await fetch(formData.hostname + projectMetadataPath);
+      const response = await fetch(hostname + projectMetadataPath);
       if (!response.ok) {
         throw new Error(`Connection failed: ${response.status} ${response.statusText}`);
       }
@@ -61,7 +65,7 @@ export default function RootPage() {
       validateSquirrelsVersion(metadata);
       
       // If connection is successful, navigate to login
-      const projectRelatedQueryParams = getProjectRelatedQueryParams(formData.hostname, formData.projectName, formData.projectVersion);
+      const projectRelatedQueryParams = getProjectRelatedQueryParams(hostname, projectName, projectVersion);
       navigate(`/login?${projectRelatedQueryParams}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Connection failed: Unknown error');
