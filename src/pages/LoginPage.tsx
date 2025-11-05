@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import LoadingSpinner from '../components/LoadingSpinner';
 import './LoginPage.css';
-import { useApp } from '../Router';
-import { AUTH_PATH } from '../utils';
+import { useApp } from '../context/AppContext';
+import { AUTH_PATH, validateSquirrelsVersion } from '../utils';
+import { ProjectMetadataType } from '../types/ProjectMetadataResponse';
 
 interface Provider {
   name: string;
@@ -21,6 +22,8 @@ export default function LoginPage() {
   const [providers, setProviders] = useState<Provider[]>([]);
   const [copiedMcp, setCopiedMcp] = useState(false);
   const [activeTab, setActiveTab] = useState<'signin' | 'actions'>('signin');
+  const [projectMetadata, setProjectMetadata] = useState<ProjectMetadataType | null>(null);
+  const [selectedMcpIndex, setSelectedMcpIndex] = useState(0);
   const [formData, setFormData] = useState({
     username: '',
     password: ''
@@ -52,6 +55,30 @@ export default function LoginPage() {
     fetchProviders();
   }, [hostname]);
 
+  useEffect(() => {
+    if (!projectMetadataPath) return;
+    
+    const fetchMetadata = async () => {
+      try {
+        const response = await fetch(`${hostname}${projectMetadataPath}`);
+        if (response.ok) {
+          const metadata: ProjectMetadataType = await response.json();
+          try {
+            validateSquirrelsVersion(metadata);
+            setProjectMetadata(metadata);
+          } catch (error: any) {
+            console.error(error.message);
+            navigate('/');
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch project metadata:', error);
+      }
+    };
+
+    fetchMetadata();
+  }, [hostname, projectMetadataPath, navigate]);
+
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
     setFormData((prevFormData) => ({
@@ -64,9 +91,50 @@ export default function LoginPage() {
     navigate(targetRedirectPath);
   };
 
-  const handleCopyMcpUrl = async () => {
+  // Helper function to build absolute URL from relative path
+  const buildAbsoluteUrl = (path: string | undefined): string => {
+    if (!path) return '';
     const effectiveHost = hostname || window.location.origin;
-    const mcpUrl = `${effectiveHost}${projectMetadataPath}/mcp`;
+    // If path already starts with http:// or https://, return as is
+    if (path.startsWith('http://') || path.startsWith('https://')) {
+      return path;
+    }
+    // Otherwise, treat as relative path and prepend hostname
+    return `${effectiveHost}${path.startsWith('/') ? path : '/' + path}`;
+  };
+
+  // Get ReDoc URL - use metadata if available, otherwise fall back to default
+  const getRedocUrl = (): string => {
+    if (projectMetadata?.redoc_path) {
+      return buildAbsoluteUrl(projectMetadata.redoc_path);
+    }
+    return `${hostname}${projectMetadataPath}/redoc`;
+  };
+
+  // Get Swagger URL - use metadata if available, otherwise fall back to default
+  const getSwaggerUrl = (): string => {
+    if (projectMetadata?.swagger_path) {
+      return buildAbsoluteUrl(projectMetadata.swagger_path);
+    }
+    return `${hostname}${projectMetadataPath}/docs`;
+  };
+
+  // Get MCP URL(s) - use metadata if available, otherwise fall back to default
+  const getMcpUrls = (): string[] => {
+    if (projectMetadata?.mcp_server_path) {
+      if (Array.isArray(projectMetadata.mcp_server_path)) {
+        return projectMetadata.mcp_server_path.map(path => buildAbsoluteUrl(path));
+      } else {
+        return [buildAbsoluteUrl(projectMetadata.mcp_server_path)];
+      }
+    }
+    const effectiveHost = hostname || window.location.origin;
+    return [`${effectiveHost}${projectMetadataPath}/mcp`];
+  };
+
+  const handleCopyMcpUrl = async () => {
+    const mcpUrls = getMcpUrls();
+    const mcpUrl = mcpUrls[selectedMcpIndex] || mcpUrls[0]; // Use selected index or fallback to first
     try {
       await navigator.clipboard.writeText(mcpUrl);
       setCopiedMcp(true);
@@ -75,6 +143,14 @@ export default function LoginPage() {
       console.error('Failed to copy MCP URL:', error);
     }
   };
+
+  // Reset selected MCP index when URLs change
+  // useEffect(() => {
+  //   const mcpUrls = getMcpUrls();
+  //   if (selectedMcpIndex >= mcpUrls.length) {
+  //     setSelectedMcpIndex(0);
+  //   }
+  // }, [projectMetadata, hostname, projectMetadataPath, selectedMcpIndex]);
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -141,40 +217,62 @@ export default function LoginPage() {
           </button>
         </div>
 
-        {activeTab === 'actions' && (
-          <div className="resources-panel">
-            <div className="section-title">API Documentation</div>
-            <div className="api-docs-buttons">
-              <a href={`${hostname}${projectMetadataPath}/redoc`} target="_blank" rel="noopener noreferrer">
-                <button className="white-button">
-                  <span>ReDoc API Docs</span>
+        {activeTab === 'actions' && (() => {
+          const redocUrl = getRedocUrl();
+          const swaggerUrl = getSwaggerUrl();
+          const mcpUrls = getMcpUrls();
+          
+          return (
+            <div className="resources-panel">
+              <div className="section-title">API Documentation</div>
+              <div className="api-docs-buttons">
+                <a href={redocUrl} target="_blank" rel="noopener noreferrer">
+                  <button className="white-button">
+                    <span>ReDoc API Docs</span>
+                  </button>
+                </a>
+                <a href={swaggerUrl} target="_blank" rel="noopener noreferrer">
+                  <button className="blue-button">
+                    <span>Swagger API Docs</span>
+                  </button>
+                </a>
+              </div>
+              <div className="section-title" style={{ marginTop: '0.75rem' }}>
+                {mcpUrls.length > 1 ? 'MCP URLs' : 'MCP URL'}
+              </div>
+              {mcpUrls.length > 1 && (
+                <select
+                  className="widget padded"
+                  style={{ marginBottom: '0.5rem', width: '100%' }}
+                  value={selectedMcpIndex}
+                  onChange={(e) => setSelectedMcpIndex(Number(e.target.value))}
+                >
+                  {mcpUrls.map((_, index) => (
+                    <option key={index} value={index}>
+                      Option {index + 1}
+                    </option>
+                  ))}
+                </select>
+              )}
+              <div className="mcp-input-group">
+                <input
+                  type="text"
+                  className="widget padded mcp-input"
+                  readOnly
+                  value={mcpUrls[selectedMcpIndex] || ''}
+                />
+                <button
+                  type="button"
+                  className="white-button icon-button"
+                  title={copiedMcp ? 'Copied!' : 'Copy MCP URL'}
+                  onClick={handleCopyMcpUrl}
+                >
+                  {copiedMcp ? '✓' : '📋'}
                 </button>
-              </a>
-              <a href={`${hostname}${projectMetadataPath}/docs`} target="_blank" rel="noopener noreferrer">
-                <button className="blue-button">
-                  <span>Swagger API Docs</span>
-                </button>
-              </a>
+              </div>
             </div>
-            <div className="section-title" style={{ marginTop: '0.75rem' }}>MCP URL</div>
-            <div className="mcp-input-group">
-              <input
-                type="text"
-                className="widget padded mcp-input"
-                readOnly
-                value={`${(hostname || window.location.origin)}${projectMetadataPath}/mcp`}
-              />
-              <button
-                type="button"
-                className="white-button icon-button"
-                title={copiedMcp ? 'Copied!' : 'Copy MCP URL'}
-                onClick={handleCopyMcpUrl}
-              >
-                {copiedMcp ? '✓' : '📋'}
-              </button>
-            </div>
-          </div>
-        )}
+          );
+        })()}
         
         {activeTab === 'signin' && (
           <form onSubmit={handleSubmit}>

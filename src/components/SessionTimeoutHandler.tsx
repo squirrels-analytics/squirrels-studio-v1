@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { useApp } from '../Router';
+import { useApp } from '../context/AppContext';
 import { AUTH_PATH } from '../utils';
 
 interface SessionTimeoutHandlerProps {

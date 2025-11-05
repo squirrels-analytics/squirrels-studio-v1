@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../Router';
+import { useApp } from '../context/AppContext';
 import { FaKey, FaLock, FaTrash, FaPlus, FaInfinity, FaCopy } from 'react-icons/fa';
 import './UserSettingsPage.css';
 import { AUTH_PATH } from '../utils';

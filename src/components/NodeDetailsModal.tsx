@@ -5,7 +5,7 @@ import { DashboardType } from "../types/DataCatalogResponse";
 import { ConnectionType } from "../types/DataCatalogResponse";
 import Modal from "./Modal";
 import "./NodeDetailsModal.css";
-import { useApp } from "../Router";
+import { useApp } from "../context/AppContext";
 import { CompiledModelResponse } from "../types/CompiledModelResponse";
 
 export default function NodeDetailsModal({ isOpen, onClose, selectedModel, selectedDataset, selectedDashboard, connections, paramSelections, requestHeaders }: { 

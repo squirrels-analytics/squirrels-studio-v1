@@ -6,6 +6,6 @@ export interface ProjectMetadataType {
   elevated_access_level?: "admin" | "member" | "guest";
   redoc_path?: string;
   swagger_path?: string;
-  mcp_server_path?: string;
+  mcp_server_path?: string | string[];
   squirrels_version: string; // Ex. a semantic version like "0.1.0"
 }

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useApp } from '../Router';
+import { useApp } from '../context/AppContext';
 import { FaCopy, FaBars, FaCog } from 'react-icons/fa';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
