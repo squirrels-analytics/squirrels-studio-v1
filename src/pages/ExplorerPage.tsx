@@ -245,6 +245,7 @@ export default function ExplorerPage() {
 
   const getRequestURL = (url: string, paramSelections: Map<string, string[]>, offset: number, limit: number, sqlQuery?: string) => {
     const queryParams = toQueryParams(paramSelections);
+    queryParams.append('x_orientation', "rows");
     queryParams.append('x_offset', offset.toString());
     queryParams.append('x_limit', limit.toString());
     if (sqlQuery) {
@@ -254,9 +255,7 @@ export default function ExplorerPage() {
   }
 
   const requestHeaders = useMemo(() => {
-    const headers: Record<string, string> = {
-      "x-orientation": "rows"
-    };
+    const headers: Record<string, string> = {};
     configurables.forEach(cfg => {
       const headerName = `x-config-${cfg.name.replace("_", "-")}`;
       headers[headerName] = configValues[cfg.name] || '';
