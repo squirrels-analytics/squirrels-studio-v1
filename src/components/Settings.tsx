@@ -1,10 +1,11 @@
-import { useState, MutableRefObject, useEffect } from 'react';
+import { useState, MutableRefObject, useEffect, useRef } from 'react';
 import { log } from '../utils';
 import { ParamDataType, ParameterType } from '../types/ParametersResponse';
 import { DataObjectType, DashboardType, DataCatalogType, OutputFormatEnum, ModelType, DatasetType, LineageType, DataTypeType, ConnectionType, ConfigurablesType } from '../types/DataCatalogResponse';
 
 
 interface SettingsProps {
+  username: string;
   projectMetadataPath: string | null;
   parametersURL: MutableRefObject<string>;
   resultsURL: MutableRefObject<string>;
@@ -26,15 +27,24 @@ interface SettingsProps {
 }
 
 export default function Settings({ 
-  projectMetadataPath, parametersURL, resultsURL, fetchJson, setParamData, clearTableData, setOutputFormat,
+  username, projectMetadataPath, parametersURL, resultsURL, fetchJson, setParamData, clearTableData, setOutputFormat,
   dataMode, datasets, dashboards, toggleDataMode, setModels, setConnections, setLineageData, setConfigurables, 
   setDatasets, setDashboards, hasElevatedAccess
 }: SettingsProps) {
 
   const [dataObj, setDataObj] = useState<DataObjectType | null>(null);
+  const prevUsernameRef = useRef<string>(username);
 
   useEffect(() => {
     if (!projectMetadataPath) return;
+
+    // Skip fetching if logging out (username changed from something to empty)
+    if (prevUsernameRef.current && !username) {
+      log("skipping data-catalog fetch during logout");
+      prevUsernameRef.current = username;
+      return;
+    }
+    prevUsernameRef.current = username;
 
     const dataCatalogURL = `${projectMetadataPath}/data-catalog`;
     fetchJson(dataCatalogURL, async (x: DataCatalogType) => {
@@ -46,7 +56,7 @@ export default function Settings({
       setLineageData(x.lineage);
       setConfigurables(x.configurables || []);
     });
-  }, [fetchJson]);
+  }, [fetchJson, projectMetadataPath, username]);
 
   useEffect(() => {
     if (dataMode === "dataset" && datasets.length > 0) {
@@ -108,7 +118,7 @@ export default function Settings({
     if (parametersURL.current) {
       fetchJson(parametersURL.current, async (x: ParamDataType) => { setParamData(x.parameters) });
     }
-  }, [dataMode, dataObj]);
+  }, [dataMode, dataObj, fetchJson, projectMetadataPath]);
 
   const dataObjList = (dataMode === "dataset") ? datasets : (dataMode === "dashboard") ? dashboards : null;
   const dataObjOptions = dataObjList ? dataObjList.map(x => 

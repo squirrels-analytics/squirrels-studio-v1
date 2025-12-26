@@ -191,15 +191,20 @@ export default function ExplorerPage() {
 
   const [explorerWidth, setExplorerWidth] = useState(320);
 
+  const usernameRef = useRef(username);
+  useEffect(() => {
+    usernameRef.current = username;
+  }, [username]);
+
   const fetchJson = useCallback(async (urlPath: string, callback: (x: any) => Promise<void>, headers?: Record<string, string>) => {
     if (!urlPath) return;
-    await callJsonAPI(hostname + urlPath, username, callback, setIsLoading, showModal, headers);
-  }, [username]);
+    await callJsonAPI(hostname + urlPath, usernameRef.current, callback, setIsLoading, showModal, headers);
+  }, [hostname, setIsLoading, showModal]);
 
   const fetchHTTPResponse = useCallback(async (urlPath: string, callback: (x: Response) => Promise<void>, headers?: Record<string, string>) => {
     if (!urlPath) return;
-    await callAPI(hostname + urlPath, username, callback, setIsLoading, showModal, headers);
-  }, [username]);
+    await callAPI(hostname + urlPath, usernameRef.current, callback, setIsLoading, showModal, headers);
+  }, [hostname, setIsLoading, showModal]);
 
   useEffect(() => {
     if (!projectMetadataPath) return;
@@ -606,6 +611,7 @@ export default function ExplorerPage() {
         <div id="left-container">
           <div className="left-container-content">
             <Settings
+              username={username}
               projectMetadataPath={projectMetadataPath}
               parametersURL={parametersURL}
               resultsURL={resultsURL}
