@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { FaCopy, FaBars, FaCog } from 'react-icons/fa';
+import { FaCopy, FaCog } from 'react-icons/fa';
 import CodeMirror from '@uiw/react-codemirror';
 import { sql } from '@codemirror/lang-sql';
 import { autocompletion, CompletionContext, CompletionResult } from '@codemirror/autocomplete';
@@ -166,10 +166,7 @@ export default function ExplorerPage() {
   const [paramData, setParamData] = useState<ParameterType[] | null>(null);
   const [resultContent, setResultContent] = useState<TableDataType | string | null>(null);
   const [outputFormat, setOutputFormat] = useState(OutputFormatEnum.UNSET);
-  const [showMenu, setShowMenu] = useState(false);
   const [showConfigMenu, setShowConfigMenu] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
-  const menuButtonRef = useRef<HTMLButtonElement>(null);
   const configMenuRef = useRef<HTMLDivElement>(null);
   const configButtonRef = useRef<HTMLButtonElement>(null);
   const [configureOptions, setConfigureOptions] = useState<ConfigureOptions>({
@@ -250,9 +247,11 @@ export default function ExplorerPage() {
 
   const getRequestURL = (url: string, paramSelections: Map<string, string[]>, offset: number, limit: number, sqlQuery?: string) => {
     const queryParams = toQueryParams(paramSelections);
-    queryParams.append('x_orientation', "rows");
-    queryParams.append('x_offset', offset.toString());
-    queryParams.append('x_limit', limit.toString());
+    if (dataMode !== "dashboard") {
+      queryParams.append('x_orientation', "rows");
+      queryParams.append('x_offset', offset.toString());
+      queryParams.append('x_limit', limit.toString());
+    }
     if (sqlQuery) {
       queryParams.append('x_sql_query', sqlQuery);
     }
@@ -338,11 +337,6 @@ export default function ExplorerPage() {
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (menuRef.current && 
-        !menuRef.current.contains(event.target as Node) && 
-        !menuButtonRef.current?.contains(event.target as Node)) {
-        setShowMenu(false);
-      }
       if (configMenuRef.current && 
         !configMenuRef.current.contains(event.target as Node) && 
         !configButtonRef.current?.contains(event.target as Node)) {
@@ -350,14 +344,14 @@ export default function ExplorerPage() {
       }
     }
 
-    if (showMenu || showConfigMenu) {
+    if (showConfigMenu) {
       document.addEventListener('mousedown', handleClickOutside);
     }
 
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [showMenu, showConfigMenu]);
+  }, [showConfigMenu]);
 
   // Initialize/merge configuration values when configurables change
   useEffect(() => {
@@ -395,65 +389,6 @@ export default function ExplorerPage() {
     >
       <FaCopy /> Copy
     </button>
-  );
-
-  const menuButton = (
-    <div className="menu-button-container">
-      <button 
-        className="white-button" 
-        ref={menuButtonRef}
-        onClick={(e) => {
-          e.stopPropagation();
-          setShowMenu(!showMenu);
-        }}
-        style={{ display: 'flex', alignItems: 'center', gap: '5px' }}
-      >
-        <FaBars /> Menu
-      </button>
-      {showMenu && (
-        <div className="menu-panel" ref={menuRef}>
-          <ul className="menu-list">
-            <li className="menu-section">
-              <div className="menu-section-header">Navigation</div>
-              {username && (
-                <div 
-                  className="menu-item"
-                  onClick={() => {
-                    navigate(`/settings?${projectRelatedQueryParams}`);
-                    setShowMenu(false);
-                  }}
-                >
-                  User Settings
-                </div>
-              )}
-              {username && isAdmin && (
-                <div 
-                  className="menu-item"
-                  onClick={() => {
-                    navigate(`/users?${projectRelatedQueryParams}`);
-                    setShowMenu(false);
-                  }}
-                >
-                  Manage Users
-                </div>
-              )}
-              <div 
-                className="menu-item"
-                onClick={async () => {
-                  if (username) {
-                    await logout();
-                  }
-                  navigate(`/login?${projectRelatedQueryParams}`);
-                  setShowMenu(false);
-                }}
-              >
-                {username ? 'Logout' : 'Login'}
-              </div>
-            </li>
-          </ul>
-        </div>
-      )}
-    </div>
   );
 
   const configButton = (
@@ -511,6 +446,43 @@ export default function ExplorerPage() {
                 </>
               )}
             </li>
+            <li className="menu-section">
+              <div className="menu-section-header">Navigation</div>
+              {username && (
+                <div 
+                  className="menu-item"
+                  onClick={() => {
+                    navigate(`/settings?${projectRelatedQueryParams}`);
+                    setShowConfigMenu(false);
+                  }}
+                >
+                  User Settings
+                </div>
+              )}
+              {username && isAdmin && (
+                <div 
+                  className="menu-item"
+                  onClick={() => {
+                    navigate(`/users?${projectRelatedQueryParams}`);
+                    setShowConfigMenu(false);
+                  }}
+                >
+                  Manage Users
+                </div>
+              )}
+              <div 
+                className="menu-item"
+                onClick={async () => {
+                  if (username) {
+                    await logout();
+                  }
+                  navigate(`/login?${projectRelatedQueryParams}`);
+                  setShowConfigMenu(false);
+                }}
+              >
+                {username ? 'Logout' : 'Login'}
+              </div>
+            </li>
           </ul>
         </div>
       )}
@@ -518,7 +490,7 @@ export default function ExplorerPage() {
   );
 
   const nextLinkDisabled = ((resultContent as TableDataType)?.total_num_rows || 0) <= (lastRequest?.page || 1) * (lastRequest?.limit || 1000);
-  const paginationContainer = (outputFormat === OutputFormatEnum.TABLE && typeof resultContent !== 'string') ? (
+  const paginationContainer = (outputFormat === OutputFormatEnum.TABLE && typeof resultContent !== 'string' && dataMode !== "dashboard") ? (
     <div id="pagination-container">
       <span 
         className={`pagination-link ${(lastRequest?.page || 1) <= 1 ? 'disabled' : ''}`}
@@ -672,7 +644,6 @@ export default function ExplorerPage() {
             </div>
             <div className="header-buttons">
               {resultContent !== null && outputFormat === OutputFormatEnum.TABLE && copyTableButton}
-              {menuButton}
               {configButton}
             </div>
           </div>
